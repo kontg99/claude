@@ -551,7 +551,15 @@ async function connect(){
     showErr('Σφάλμα: '+e.message);
   }
 }
-function apiUrl(action,extra=''){return `${S.server}/player_api.php?username=${enc(S.user)}&password=${enc(S.pass)}&action=${action}${extra}`;}
+function safeServer(){
+  // Αν η σελίδα φορτώνεται μέσω HTTPS (π.χ. GitHub Pages), αναβαθμίζουμε
+  // αυτόματα το server URL σε HTTPS για να αποφύγουμε το Mixed Content error.
+  if(location.protocol==='https:' && S.server.startsWith('http://')){
+    return S.server.replace('http://','https://');
+  }
+  return S.server;
+}
+function apiUrl(action,extra=''){return `${safeServer()}/player_api.php?username=${enc(S.user)}&password=${enc(S.pass)}&action=${action}${extra}`;}
 function enc(s){return encodeURIComponent(s);}
 function showErr(m){const e=document.getElementById('login-error');e.textContent=m;e.style.display='block';}
 function hideErr(){document.getElementById('login-error').style.display='none';}
@@ -1110,7 +1118,7 @@ function playLive(ch){
   currentChId=ch.stream_id;
   if(S.currentCat&&S.channels[S.currentCat]) renderChannels(S.channels[S.currentCat],document.querySelector('.ch-search-mini').value);
   const ext=ch.container_extension||'ts';
-  const url=`${S.server}/live/${enc(S.user)}/${enc(S.pass)}/${ch.stream_id}.${ext}`;
+  const url=`${safeServer()}/live/${enc(S.user)}/${enc(S.pass)}/${ch.stream_id}.${ext}`;
   doPlay(url,ch.name);
   document.getElementById('now-playing-info').innerHTML=`<div class="channel-name">${esc(ch.name)}</div>`;
   showChannelOverlay(ch);
@@ -1156,7 +1164,7 @@ function renderVodGrid(streams){
 }
 function playVod(s){
   const ext=s.container_extension||'mp4';
-  const url=`${S.server}/movie/${enc(S.user)}/${enc(S.pass)}/${s.stream_id}.${ext}`;
+  const url=`${safeServer()}/movie/${enc(S.user)}/${enc(S.pass)}/${s.stream_id}.${ext}`;
   switchTab('live'); currentChId=null;
   clearInterval(epgTimer);
   document.getElementById('epg-now-title').textContent='—';
@@ -1495,7 +1503,7 @@ function openMpvDirect(ch){
   clearInterval(epgTimer);
   epgTimer=setInterval(updateEpgBar,30000);
   const ext=ch.container_extension||'ts';
-  const url=`${S.server}/live/${enc(S.user)}/${enc(S.pass)}/${ch.stream_id}.${ext}`;
+  const url=`${safeServer()}/live/${enc(S.user)}/${enc(S.pass)}/${ch.stream_id}.${ext}`;
   const mpvUrl='mpv://'+url;
   const a=document.createElement('a');
   a.href=mpvUrl;

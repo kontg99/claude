@@ -1,0 +1,2097 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NOVA STREAM · IPTV</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.7/hls.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mpegts.js@1.7.3/dist/mpegts.min.js"></script>
+<style>
+:root{--bg:#07080f;--surface:#0d1020;--surface2:#131728;--border:#1e2540;--accent:#00d4ff;--accent2:#7b2fff;--accent3:#ff3e6c;--text:#e8ecff;--muted:#5a6080;--success:#00ffaa;--glow:0 0 20px rgba(0,212,255,0.3);}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'Rajdhani',sans-serif;min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 20% 20%,rgba(123,47,255,0.08) 0%,transparent 60%),radial-gradient(ellipse at 80% 80%,rgba(0,212,255,0.06) 0%,transparent 60%);pointer-events:none;z-index:0;}
+
+/* LOGIN */
+#login-screen{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;background:var(--bg);}
+.login-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:48px 40px;width:420px;max-width:95vw;position:relative;overflow:hidden;}
+.login-box::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent2),var(--accent),var(--accent2));}
+.login-logo{text-align:center;margin-bottom:36px;}
+.login-logo h1{font-family:'Orbitron',monospace;font-size:28px;font-weight:900;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:4px;}
+.login-logo p{color:var(--muted);font-size:13px;margin-top:6px;letter-spacing:2px;}
+.form-group{margin-bottom:18px;}
+.form-group label{display:block;font-size:11px;letter-spacing:2px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;}
+.form-group input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 16px;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:15px;outline:none;transition:border-color .2s,box-shadow .2s;}
+.form-group input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,212,255,.1);}
+.form-group input::placeholder{color:var(--muted);}
+.btn-connect{width:100%;background:linear-gradient(135deg,var(--accent2),var(--accent));border:none;border-radius:8px;padding:14px;color:#fff;font-family:'Orbitron',monospace;font-size:13px;letter-spacing:2px;font-weight:700;cursor:pointer;transition:opacity .2s,transform .1s;margin-top:8px;}
+.btn-connect:hover{opacity:.9;transform:translateY(-1px);}
+.remember-row{display:flex;align-items:center;justify-content:space-between;margin-top:14px;}
+.remember-check{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--muted);}
+.remember-check input{accent-color:var(--accent);width:14px;height:14px;cursor:pointer;}
+.remember-check:hover{color:var(--text);}
+.btn-clear-saved{background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;letter-spacing:1px;font-family:'Rajdhani',sans-serif;text-decoration:underline;padding:0;}
+.btn-clear-saved:hover{color:var(--accent3);}
+.login-error{background:rgba(255,62,108,.1);border:1px solid rgba(255,62,108,.3);border-radius:6px;padding:10px 14px;color:var(--accent3);font-size:13px;margin-top:14px;display:none;}
+.loading-bar{height:3px;border-radius:2px;background:linear-gradient(90deg,var(--accent2),var(--accent));margin-top:14px;display:none;animation:loadpulse 1.5s ease-in-out infinite;}
+@keyframes loadpulse{0%,100%{opacity:.4}50%{opacity:1}}
+
+/* APP */
+#app{display:none;height:100vh;flex-direction:column;position:relative;z-index:1;}
+.header{background:rgba(13,16,32,.95);border-bottom:1px solid var(--border);padding:0 24px;height:60px;display:flex;align-items:center;gap:20px;backdrop-filter:blur(10px);position:relative;z-index:10;flex-shrink:0;}
+.header-logo{font-family:'Orbitron',monospace;font-size:16px;font-weight:900;letter-spacing:3px;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;white-space:nowrap;}
+.header-tabs{display:flex;gap:4px;flex:1;}
+.tab-btn{background:none;border:none;padding:8px 16px;border-radius:6px;color:var(--muted);font-family:'Rajdhani',sans-serif;font-size:14px;letter-spacing:1px;font-weight:600;cursor:pointer;transition:all .2s;text-transform:uppercase;}
+.tab-btn.active{background:var(--surface2);color:var(--accent);}
+.tab-btn:hover:not(.active){color:var(--text);}
+.header-right{display:flex;align-items:center;gap:12px;margin-left:auto;}
+.server-info{font-size:11px;color:var(--muted);letter-spacing:1px;text-align:right;}
+.server-info span{color:var(--success);}
+.btn-logout{background:rgba(255,62,108,.1);border:1px solid rgba(255,62,108,.3);border-radius:6px;padding:6px 14px;color:var(--accent3);font-size:12px;letter-spacing:1px;cursor:pointer;font-family:'Rajdhani',sans-serif;font-weight:600;transition:all .2s;}
+.btn-logout:hover{background:rgba(255,62,108,.2);}
+
+.main-layout{display:flex;flex:1;overflow:hidden;}
+
+/* SIDEBAR */
+.sidebar{width:200px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+.sidebar-search{padding:14px;border-bottom:1px solid var(--border);}
+.sidebar-search input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:9px 12px;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:14px;outline:none;}
+.sidebar-search input:focus{border-color:var(--accent);}
+.sidebar-search input::placeholder{color:var(--muted);}
+.categories-list{flex:1;overflow-y:auto;padding:8px;}
+.categories-list::-webkit-scrollbar{width:4px;}
+.categories-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+
+/* CATEGORY ITEM with FAV */
+.cat-section-label{font-size:10px;letter-spacing:2px;color:var(--muted);padding:8px 12px 4px;text-transform:uppercase;}
+.cat-item{padding:8px 10px;border-radius:6px;cursor:pointer;font-size:13px;letter-spacing:.5px;display:flex;align-items:center;gap:6px;transition:all .15s;margin-bottom:2px;}
+.cat-item:hover{background:var(--surface2);color:var(--text);}
+.cat-item.active{background:rgba(0,212,255,.1);color:var(--accent);border-left:2px solid var(--accent);}
+.cat-item .cat-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.fav-btn{background:none;border:none;cursor:pointer;font-size:13px;padding:2px 4px;opacity:.25;transition:opacity .15s,transform .15s;flex-shrink:0;line-height:1;}
+.cat-item:hover .fav-btn{opacity:.6;}
+.fav-btn.active{opacity:1;transform:scale(1.1);}
+
+/* ── CHANNEL PANEL — EPG GRID ── */
+.channel-panel{width:820px;flex-shrink:0;background:var(--surface2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+.channel-header{padding:10px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:8px;flex-shrink:0;}
+.channel-header-title{font-size:12px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;font-weight:600;white-space:nowrap;}
+.ch-search-mini{background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:5px 8px;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:12px;outline:none;width:110px;}
+.ch-search-mini::placeholder{color:var(--muted);}
+.ch-epg-status{font-size:10px;color:var(--muted);letter-spacing:1px;white-space:nowrap;}
+.ch-epg-status span{color:var(--success);}
+
+/* Grid wrapper */
+.epg-grid-outer{flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0;}
+
+/* Two-panel layout: fixed channel names | scrollable EPG */
+.epg-two-panel{flex:1;display:flex;overflow:hidden;min-height:0;}
+
+/* LEFT PANEL — fixed channel names, scrolls only vertically */
+.epg-ch-panel{width:200px;flex-shrink:0;display:flex;flex-direction:column;border-right:1px solid var(--border);overflow:hidden;}
+.epg-ch-panel-header{height:29px;flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--border);padding:6px 10px;font-size:10px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;display:flex;align-items:center;}
+.epg-ch-panel-list{flex:1;overflow-y:scroll;overflow-x:hidden;}
+.epg-ch-panel-list::-webkit-scrollbar{width:0px;}
+
+/* RIGHT PANEL — scrolls both X (time) and Y (channels) */
+.epg-scroll-area{flex:1;overflow:auto;position:relative;min-height:0;}
+.epg-scroll-area::-webkit-scrollbar{width:5px;height:5px;}
+.epg-scroll-area::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+.epg-scroll-area::-webkit-scrollbar-corner{background:transparent;}
+
+/* Inner grid table */
+.epg-grid-inner{display:flex;flex-direction:column;position:relative;min-width:100%;}
+
+/* ── TIME RULER (sticky top inside right panel) ── */
+.epg-time-ruler{display:flex;position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;}
+.epg-ruler-label{display:none;}
+.epg-ruler-times{flex:1;position:relative;height:28px;background:var(--surface);}
+.epg-ruler-tick{position:absolute;top:0;height:100%;display:flex;flex-direction:column;align-items:flex-start;}
+.epg-ruler-tick-line{width:1px;height:8px;background:var(--border);margin-top:0;}
+.epg-ruler-tick-label{font-size:10px;color:var(--accent);letter-spacing:.5px;white-space:nowrap;font-family:'Rajdhani',sans-serif;padding:2px 4px;line-height:1;}
+.epg-ruler-tick.tick-now .epg-ruler-tick-label{color:var(--accent3);font-weight:700;}
+
+/* Μπάνερ ημέρας πάνω από τις ώρες */
+.epg-ruler-times{flex:1;position:relative;height:44px;background:var(--surface);}
+.epg-day-banner{position:absolute;top:0;height:16px;display:flex;align-items:center;padding:0 6px;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;font-family:'Orbitron',monospace;white-space:nowrap;border-right:1px solid var(--border);box-sizing:border-box;}
+.epg-ruler-tick{position:absolute;top:16px;height:calc(100% - 16px);display:flex;flex-direction:column;align-items:flex-start;}
+
+/* NOW indicator — μόνο στον ruler */
+.epg-now-line{position:absolute;top:0;bottom:0;width:2px;background:var(--accent3);z-index:15;pointer-events:none;}
+.epg-now-line::before{content:'▼';position:absolute;top:0;left:-5px;font-size:10px;color:var(--accent3);line-height:1;}
+
+/* Μπάνερ ημέρας — όλες κόκκινο χρώμα, σημερινή πιο έντονη */
+.epg-day-banner.day-today{color:var(--accent3);background:rgba(255,62,108,.12);border-bottom:1px solid rgba(255,62,108,.4);}
+.epg-day-banner.day-other{color:var(--accent3);background:rgba(255,62,108,.04);border-bottom:1px solid rgba(255,62,108,.15);opacity:.7;}
+
+/* ── CHANNEL ROWS ── */
+.channel-item{display:flex;align-items:stretch;border-bottom:1px solid rgba(255,255,255,.04);cursor:default;transition:background .1s;min-height:50px;position:relative;}
+.ch-left:hover{background:rgba(255,255,255,.05);}
+.ch-left:hover .ch-name{color:var(--accent);}
+.ch-left.active-ch{background:rgba(0,212,255,.1);border-left:2px solid var(--accent);}
+.channel-item:hover{background:rgba(255,255,255,.03);}
+.channel-item.active{background:rgba(0,212,255,.06);}
+.kb-focus{outline:2px solid var(--accent);outline-offset:-2px;}
+
+/* Left: logo + name — now lives in fixed left panel, not in row */
+.ch-left{width:200px;flex-shrink:0;padding:6px 10px;display:flex;align-items:center;gap:8px;border-right:none;cursor:pointer;background:var(--surface2);transition:background .1s;min-height:50px;border-bottom:1px solid rgba(255,255,255,.04);}
+/* Right-panel EPG row (no ch-left inside) */
+.channel-item:hover .ch-left{background:rgba(255,255,255,.02);}
+.channel-item.active .ch-left{background:rgba(0,212,255,.06);border-left:2px solid var(--accent);}
+.ch-left:hover .ch-name{color:var(--accent);}
+.ch-logo{width:30px;height:30px;border-radius:5px;background:var(--surface);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--muted);overflow:hidden;border:1px solid var(--border);}
+.ch-logo img{width:100%;height:100%;object-fit:cover;border-radius:4px;}
+.ch-name{font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text);transition:color .15s;flex:1;}
+
+/* Right: EPG grid row — time-positioned slots */
+.ch-epg-row{flex:1;position:relative;min-height:50px;overflow:hidden;}
+
+/* EPG slots — absolutely positioned by time */
+.ch-epg-slot{position:absolute;top:4px;bottom:4px;border-radius:5px;padding:3px 7px;cursor:pointer;display:flex;flex-direction:column;justify-content:center;transition:background .15s;border:1px solid transparent;box-sizing:border-box;overflow:hidden;}
+.ch-epg-slot.slot-past{background:rgba(255,255,255,.02);border-color:rgba(255,255,255,.05);opacity:.5;}
+.ch-epg-slot.slot-now{background:rgba(0,212,255,.13);border-color:rgba(0,212,255,.35);}
+.ch-epg-slot.slot-next{background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.08);}
+.ch-epg-slot:hover{background:rgba(0,212,255,.25)!important;border-color:rgba(0,212,255,.6)!important;z-index:5;}
+.ch-epg-slot .slot-time{font-size:10px;color:var(--accent);white-space:nowrap;font-family:'Rajdhani',sans-serif;line-height:1.2;}
+.ch-epg-slot.slot-now .slot-time{color:var(--accent);font-weight:700;}
+.ch-epg-slot.slot-past .slot-time{color:var(--muted);}
+.ch-epg-slot .slot-title{font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text);line-height:1.3;}
+.ch-epg-slot.slot-now .slot-title{color:var(--accent);}
+.slot-prog-bar{height:2px;background:rgba(255,255,255,.1);border-radius:1px;margin-top:3px;overflow:hidden;flex-shrink:0;}
+.slot-prog-fill{height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:1px;}
+.ch-epg-loading{font-size:9px;color:var(--muted);letter-spacing:1px;font-style:italic;padding:0 12px;display:flex;align-items:center;height:100%;}
+.ch-epg-none{font-size:9px;color:var(--muted);letter-spacing:.5px;padding:0 12px;display:flex;align-items:center;height:100%;}
+
+/* Action buttons — sticky δεξιά, πάντα ορατά */
+.ch-actions{display:flex;flex-direction:column;justify-content:center;gap:3px;padding:4px 6px;flex-shrink:0;border-left:1px solid var(--border);opacity:1;background:var(--surface2);position:sticky;right:0;z-index:10;}
+.ch-mpv-btn{background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);border-radius:4px;color:var(--accent);font-size:9px;font-family:'Rajdhani',sans-serif;font-weight:700;letter-spacing:.5px;padding:2px 5px;cursor:pointer;white-space:nowrap;}
+.ch-mpv-btn:hover{background:rgba(0,212,255,.25)!important;}
+
+/* Channels list wrapper — overflow:visible ώστε το sticky ch-actions να δουλεύει */
+.channels-list{flex:1;overflow:visible;display:flex;flex-direction:column;}
+
+/* EPG detail popup */
+#epg-popup{position:fixed;z-index:600;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;min-width:260px;max-width:340px;box-shadow:0 8px 32px rgba(0,0,0,.6);display:none;pointer-events:auto;}
+#epg-popup::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:10px 10px 0 0;background:linear-gradient(90deg,var(--accent2),var(--accent));}
+.epg-popup-close{position:absolute;top:10px;right:12px;background:none;border:none;color:var(--muted);font-size:15px;cursor:pointer;padding:2px 6px;border-radius:4px;}
+.epg-popup-close:hover{color:var(--text);}
+.epg-popup-ch{font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;}
+.epg-popup-now-badge{display:inline-block;background:var(--accent3);color:#fff;font-size:8px;font-weight:700;letter-spacing:1px;padding:1px 6px;border-radius:3px;margin-bottom:8px;}
+.epg-popup-title{font-size:15px;font-weight:700;color:var(--text);line-height:1.3;margin-bottom:8px;padding-right:24px;}
+.epg-popup-time{font-size:11px;color:var(--accent);letter-spacing:.5px;margin-bottom:4px;}
+.epg-popup-dur{font-size:10px;color:var(--muted);margin-bottom:10px;}
+.epg-popup-desc{font-size:12px;color:var(--muted);line-height:1.6;max-height:120px;overflow-y:auto;border-top:1px solid var(--border);padding-top:10px;margin-top:4px;}
+.epg-popup-desc::-webkit-scrollbar{width:3px;}
+.epg-popup-desc::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+.epg-popup-nodesc{font-size:11px;color:var(--muted);font-style:italic;border-top:1px solid var(--border);padding-top:10px;margin-top:4px;}
+
+/* (duplicate removed — rule defined above with sticky right) */
+.ch-mpv-btn{background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);border-radius:4px;color:var(--accent);font-size:9px;font-family:'Rajdhani',sans-serif;font-weight:700;letter-spacing:.5px;padding:2px 5px;cursor:pointer;white-space:nowrap;}
+.ch-mpv-btn:hover{background:rgba(0,212,255,.25)!important;}
+
+/* VIDEO INFO PANEL */
+#video-info-panel{position:absolute;top:12px;right:12px;z-index:50;background:rgba(7,8,15,.88);border:1px solid var(--border);border-radius:10px;padding:14px 18px;font-size:12px;min-width:200px;backdrop-filter:blur(8px);display:none;pointer-events:none;}
+#video-info-panel.visible{display:block;}
+.vi-title{font-family:'Orbitron',monospace;font-size:10px;letter-spacing:2px;color:var(--accent);margin-bottom:10px;text-transform:uppercase;}
+.vi-row{display:flex;justify-content:space-between;gap:16px;margin-bottom:5px;align-items:center;}
+.vi-label{color:var(--muted);font-size:11px;letter-spacing:1px;}
+.vi-val{color:var(--text);font-weight:700;font-size:12px;text-align:right;}
+.vi-val.good{color:var(--success);}
+.vi-val.warn{color:#ffd700;}
+.vi-val.bad{color:var(--accent3);}
+.vi-sep{border:none;border-top:1px solid var(--border);margin:8px 0;}
+/* Context menu */
+#vid-ctx-menu{position:fixed;z-index:200;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:4px;min-width:180px;box-shadow:0 8px 24px rgba(0,0,0,.5);display:none;}
+#vid-ctx-menu button{display:block;width:100%;background:none;border:none;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:13px;padding:8px 14px;text-align:left;cursor:pointer;border-radius:5px;letter-spacing:.5px;}
+#vid-ctx-menu button:hover{background:var(--surface2);color:var(--accent);}
+#vid-ctx-menu .ctx-sep{border:none;border-top:1px solid var(--border);margin:4px 0;}
+
+/* PLAYER */
+.player-area{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
+.player-container{flex:1;display:flex;align-items:center;justify-content:center;position:relative;background:#000;min-height:0;}
+video#player{width:100%;height:100%;object-fit:contain;background:#000;display:block;filter:blur(0.1px);}
+.player-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;color:var(--muted);}
+.player-placeholder .icon{font-size:64px;opacity:.2;}
+.player-placeholder p{font-size:14px;letter-spacing:2px;}
+
+/* EPG BAR below player */
+.epg-bar{background:rgba(13,16,32,.98);border-top:1px solid var(--border);padding:0;flex-shrink:0;}
+.epg-bar-header{padding:8px 20px;display:flex;align-items:center;gap:16px;cursor:pointer;user-select:none;}
+.epg-bar-header:hover{background:rgba(255,255,255,.02);}
+.epg-now-label{font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;flex-shrink:0;}
+.epg-now-title{font-size:13px;font-weight:700;color:var(--accent);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.epg-now-time{font-size:11px;color:var(--muted);flex-shrink:0;}
+.epg-toggle-icon{font-size:11px;color:var(--muted);flex-shrink:0;transition:transform .3s;}
+.epg-bar.expanded .epg-toggle-icon{transform:rotate(180deg);}
+.epg-progress-wrap{padding:0 20px 4px;display:flex;align-items:center;gap:10px;}
+.epg-progress-bar{flex:1;height:3px;background:var(--border);border-radius:2px;overflow:hidden;}
+.epg-progress-fill{height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:2px;transition:width .5s;}
+.epg-next{padding:2px 20px 6px;font-size:11px;color:var(--muted);}
+.epg-next span{color:var(--text);}
+/* EPG expanded content - hidden by default */
+.epg-expanded-content{display:none;border-top:1px solid var(--border);}
+.epg-bar.expanded .epg-expanded-content{display:block;}
+.epg-schedule{overflow-y:auto;max-height:600px;padding:6px 12px 10px;}
+.epg-schedule::-webkit-scrollbar{width:4px;}
+.epg-schedule::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+.epg-schedule-item{padding:8px 10px;border-radius:6px;margin-bottom:3px;cursor:pointer;border-left:2px solid transparent;transition:background .15s;}
+.epg-schedule-item:hover{background:rgba(255,255,255,.04);}
+.epg-schedule-item.now{background:rgba(0,212,255,.07);border-left-color:var(--accent);}
+.epg-schedule-item .epg-s-time{font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:3px;}
+.epg-schedule-item .epg-s-title{font-size:13px;font-weight:600;color:var(--text);}
+.epg-schedule-item.now .epg-s-title{color:var(--accent);}
+.epg-schedule-item .epg-s-desc{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.5;display:none;}
+.epg-schedule-item.open .epg-s-desc{display:block;}
+
+.player-controls{background:rgba(13,16,32,.98);border-top:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;gap:14px;flex-shrink:0;}
+.now-playing{flex:1;min-width:0;}
+.now-playing .channel-name{font-size:14px;font-weight:700;color:var(--accent);letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ctrl-btn{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);cursor:pointer;font-size:15px;transition:all .15s;}
+.ctrl-btn:hover{background:var(--surface2);border-color:var(--accent);color:var(--accent);}
+.vol-slider{width:80px;accent-color:var(--accent);cursor:pointer;}
+.ctrl-btn.pause-active{background:rgba(0,212,255,.15);border-color:var(--accent);color:var(--accent);}
+/* External player modal */
+#ext-player-modal{position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+#ext-player-modal.open{display:flex;}
+.ext-modal-box{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:32px 28px;width:440px;max-width:95vw;position:relative;}
+.ext-modal-box::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:14px 14px 0 0;background:linear-gradient(90deg,var(--accent2),var(--accent));}
+.ext-modal-title{font-family:'Orbitron',monospace;font-size:13px;letter-spacing:2px;color:var(--accent);margin-bottom:6px;}
+.ext-modal-sub{font-size:12px;color:var(--muted);margin-bottom:22px;line-height:1.5;}
+.ext-btn{display:flex;align-items:center;gap:12px;width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:13px 16px;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;margin-bottom:10px;text-decoration:none;}
+.ext-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(0,212,255,.06);}
+.ext-btn .ext-icon{font-size:22px;flex-shrink:0;}
+.ext-btn .ext-info{text-align:left;}
+.ext-btn .ext-info small{display:block;font-size:11px;color:var(--muted);font-weight:400;margin-top:2px;}
+.ext-modal-close{position:absolute;top:14px;right:16px;background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:4px 8px;border-radius:4px;}
+.ext-modal-close:hover{color:var(--text);}
+
+/* TABS */
+.tab-content{display:none;flex:1;overflow:hidden;flex-direction:column;}
+.tab-content.active{display:flex;}
+#tab-live{flex-direction:row;}
+.vod-grid{flex:1;overflow-y:auto;padding:20px;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:16px;}
+.vod-grid::-webkit-scrollbar{width:4px;}
+.vod-grid::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+.vod-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;cursor:pointer;transition:all .2s;}
+.vod-card:hover{transform:translateY(-3px);border-color:var(--accent);box-shadow:var(--glow);}
+.vod-thumb{aspect-ratio:2/3;background:var(--surface2);overflow:hidden;}
+.vod-thumb img{width:100%;height:100%;object-fit:cover;}
+.vod-thumb .no-img{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:36px;color:var(--muted);}
+.vod-meta{padding:10px 10px 12px;}
+.vod-title{font-size:12px;font-weight:600;line-height:1.4;}
+.vod-rating{font-size:11px;color:#ffd700;margin-top:4px;}
+
+.empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);gap:12px;}
+.empty-state .icon{font-size:48px;opacity:.3;}
+.empty-state p{font-size:14px;letter-spacing:1px;}
+.sidebar-loading{padding:20px;text-align:center;color:var(--muted);font-size:13px;}
+.spinner{width:28px;height:28px;border-radius:50%;border:3px solid var(--border);border-top-color:var(--accent);animation:spin .8s linear infinite;margin:0 auto;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+#toast{position:fixed;bottom:24px;right:24px;z-index:999;background:var(--surface2);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:8px;padding:12px 18px;font-size:13px;max-width:300px;display:none;animation:fadeup .3s ease;}
+@keyframes fadeup{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* SETTINGS MODAL */
+#settings-modal{position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+#settings-modal.open{display:flex;}
+.settings-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:40px 36px;width:420px;max-width:95vw;position:relative;overflow:hidden;}
+.settings-box::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent2),var(--accent),var(--accent2));}
+.settings-title{font-family:'Orbitron',monospace;font-size:14px;letter-spacing:3px;color:var(--accent);margin-bottom:24px;text-transform:uppercase;}
+.settings-close{position:absolute;top:14px;right:16px;background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:4px 8px;border-radius:4px;}
+.settings-close:hover{color:var(--text);}
+.btn-save-settings{width:100%;background:linear-gradient(135deg,var(--accent2),var(--accent));border:none;border-radius:8px;padding:13px;color:#fff;font-family:'Orbitron',monospace;font-size:12px;letter-spacing:2px;font-weight:700;cursor:pointer;transition:opacity .2s,transform .1s;margin-top:8px;}
+.btn-save-settings:hover{opacity:.9;transform:translateY(-1px);}
+.settings-note{font-size:11px;color:var(--muted);margin-top:12px;text-align:center;letter-spacing:.5px;line-height:1.6;}
+
+
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo"><h1>NOVA·STREAM</h1><p>XTREAM CODES IPTV PLAYER</p></div>
+    <div class="form-group"><label>Server URL</label><input type="text" id="server-url" placeholder="http://server.example.com:8080"/></div>
+    <div class="form-group"><label>Username</label><input type="text" id="username" placeholder="your_username"/></div>
+    <div class="form-group"><label>Password</label><input type="password" id="password" placeholder="••••••••"/></div>
+    <button class="btn-connect" onclick="connect()">⚡ ΣΥΝΔΕΣΗ</button>
+    <div class="remember-row">
+      <label class="remember-check"><input type="checkbox" id="remember-me" checked/> Θυμήσου με</label>
+      <button class="btn-clear-saved" id="btn-clear" onclick="clearSaved()">✕ Διαγραφή αποθηκευμένων</button>
+    </div>
+    <div class="loading-bar" id="login-loading"></div>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="header">
+    <div class="header-logo">NOVA·STREAM</div>
+    <div class="header-tabs">
+      <button class="tab-btn active" onclick="switchTab('live')">📺 Live TV</button>
+    </div>
+    <div class="header-right">
+      <div id="expiry-display" style="font-size:11px;letter-spacing:1px;text-align:right;"></div>
+      <div class="server-info" id="server-display"></div>
+      <button class="ctrl-btn" onclick="toggleGlobalSearch()" title="Αναζήτηση καναλιού (Ctrl+F)" style="font-size:13px;padding:6px 12px;">🔍</button>
+      <button class="ctrl-btn" onclick="openSettings()" title="Ρυθμίσεις σύνδεσης" style="font-size:13px;padding:6px 12px;">⚙️</button>
+      <button class="btn-logout" onclick="logout()">ΕΞΟΔΟΣ</button>
+    </div>
+  </div>
+
+  <div class="main-layout">
+    <!-- LIVE TV -->
+    <div class="tab-content active" id="tab-live">
+      <div class="sidebar">
+        <div class="sidebar-search">
+          <input type="text" id="cat-search" placeholder="🔍 Αναζήτηση κατηγορίας..." oninput="renderCategories(this.value)"/>
+        </div>
+        <div class="categories-list" id="categories-list">
+          <div class="sidebar-loading"><div class="spinner"></div></div>
+        </div>
+      </div>
+
+      <div class="channel-panel">
+        <div class="channel-header">
+          <span class="channel-header-title" id="channel-panel-title">ΚΑΝΑΛΙΑ</span>
+          <span class="ch-epg-status" id="ch-epg-status"></span>
+          <input class="ch-search-mini" type="text" placeholder="🔍 Αναζήτηση..." oninput="filterChannels(this.value)"/>
+        </div>
+        <div class="epg-grid-outer">
+          <div class="epg-two-panel">
+            <!-- Αριστερά: σταθερή στήλη καναλιών -->
+            <div class="epg-ch-panel" id="epg-ch-panel">
+              <div class="epg-ch-panel-header">📅 EPG</div>
+              <div class="epg-ch-panel-list" id="epg-ch-panel-list"></div>
+            </div>
+            <!-- Δεξιά: scrollable EPG grid -->
+            <div class="epg-scroll-area" id="epg-scroll-area">
+              <div class="epg-grid-inner" id="epg-grid-inner">
+                <div class="epg-time-ruler" id="epg-time-ruler">
+                  <div class="epg-ruler-times" id="epg-ruler-times"></div>
+                </div>
+                <div class="channels-list" id="channels-list">
+                  <div class="empty-state"><div class="icon">📡</div><p>Επέλεξε κατηγορία</p></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="player-area">
+        <div class="player-container" id="player-container">
+          <div class="player-placeholder" id="player-placeholder"><div class="icon">▶</div><p>ΕΠΙΛΕΞΕ ΚΑΝΑΛΙ</p></div>
+          <video id="player" style="display:none"></video>
+          <!-- VIDEO INFO PANEL -->
+          <div id="video-info-panel">
+            <div class="vi-title">📊 Πληροφορίες</div>
+            <div class="vi-row"><span class="vi-label">ΑΝΑΛΥΣΗ</span><span class="vi-val" id="vi-res">—</span></div>
+            <div class="vi-row"><span class="vi-label">FPS</span><span class="vi-val" id="vi-fps">—</span></div>
+            <div class="vi-row"><span class="vi-label">CODEC</span><span class="vi-val" id="vi-codec">—</span></div>
+            <hr class="vi-sep">
+            <div class="vi-row"><span class="vi-label">DROPPED</span><span class="vi-val" id="vi-dropped">—</span></div>
+            <div class="vi-row"><span class="vi-label">BUFFER</span><span class="vi-val" id="vi-buf">—</span></div>
+          </div>
+        </div>
+
+        <!-- EPG BAR -->
+        <div class="epg-bar" id="epg-bar">
+          <div class="epg-bar-header" onclick="toggleEpgBar()">
+            <span class="epg-now-label">📅 EPG</span>
+            <span class="epg-now-title" id="epg-now-title">—</span>
+            <span class="epg-now-time" id="epg-now-time"></span>
+            <span class="epg-toggle-icon">▲</span>
+          </div>
+          <div class="epg-progress-wrap">
+            <div class="epg-progress-bar"><div class="epg-progress-fill" id="epg-progress" style="width:0%"></div></div>
+          </div>
+          <div class="epg-next" id="epg-next"></div>
+          <div class="epg-expanded-content">
+            <div class="epg-schedule" id="epg-schedule"></div>
+          </div>
+        </div>
+
+        <div class="player-controls">
+          <div class="now-playing" id="now-playing-info">
+            <div class="channel-name">—</div>
+          </div>
+          <span id="stream-timer" style="font-size:12px;color:var(--muted);letter-spacing:1px;font-family:'Rajdhani',sans-serif;display:none">▶ 00:00:00</span>
+          <button class="ctrl-btn" id="pause-btn" onclick="togglePause()" title="Pause / Play (Space)">⏸</button>
+          <button class="ctrl-btn" id="stop-btn" onclick="stopStream()" title="Stop (S)" style="display:none">⏹</button>
+          <button class="ctrl-btn" id="mute-btn" onclick="toggleMute()">🔊</button>
+          <input type="range" class="vol-slider" id="vol-slider" min="0" max="1" step="0.05" value="0.8" oninput="setVolume(this.value)"/>
+          <button class="ctrl-btn" id="ext-btn" onclick="openExtPlayer()" title="Εξωτερικός Player" style="display:none">📡</button>
+          <button class="ctrl-btn" id="fs-btn" onclick="toggleFullscreen()" title="Fullscreen (F / Φ)">⛶</button>
+        </div>
+      </div>
+    </div>
+
+
+  </div>
+</div>
+<!-- SETTINGS MODAL -->
+<div id="settings-modal">
+  <div class="settings-box">
+    <button class="settings-close" onclick="closeSettings()">✕</button>
+    <div class="settings-title">⚙️ Ρυθμίσεις Σύνδεσης</div>
+    <div class="form-group"><label>Server URL</label><input type="text" id="settings-server" placeholder="http://server.example.com:8080"/></div>
+    <div class="form-group"><label>Username</label><input type="text" id="settings-user" placeholder="your_username"/></div>
+    <div class="form-group"><label>Password</label><input type="password" id="settings-pass" placeholder="••••••••"/></div>
+    <button class="btn-save-settings" onclick="saveSettings()">💾 ΑΠΟΘΗΚΕΥΣΗ &amp; ΕΠΑΝΑΣΥΝΔΕΣΗ</button>
+    <div class="settings-note">Μετά την αποθήκευση θα γίνει αυτόματη επανασύνδεση με τα νέα στοιχεία.</div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── STATE ──
+let S={server:'',user:'',pass:'',categories:[],vodCats:[],seriesCats:[],channels:{},currentCat:null,currentChannel:null};
+let vodCache={},seriesCache={};
+let epgData={};        // { stream_id: [{title,start,stop},...] }
+let epgTimer=null;
+let epgBarOpen=false;
+let currentChId=null;
+
+// ── ΠΕΡΙΟΔΙΚΟΣ ΚΑΘΑΡΙΣΜΟΣ ΜΝΗΜΗΣ (κάθε 30 λεπτά) ──
+// Αφαιρεί EPG δεδομένα από κανάλια που δεν παρακολουθούνται
+// για να μην γεμίζει η μνήμη σε μακρόχρονες συνεδρίες
+setInterval(()=>{
+  const keepId=currentChId;
+  let removed=0;
+  for(const id in epgData){
+    if(id!==String(keepId)){
+      delete epgData[id];
+      removed++;
+    }
+  }
+  if(removed>0) console.log(`[Memory] Καθαρίστηκαν EPG δεδομένα ${removed} καναλιών`);
+}, 30*60*1000);
+
+// ── FAVORITES ── (localStorage)
+function getFavs(){ try{return JSON.parse(localStorage.getItem('ns_favs')||'[]');}catch{return[];} }
+function saveFavs(arr){ localStorage.setItem('ns_favs',JSON.stringify(arr)); }
+function isFav(id){ return getFavs().includes(String(id)); }
+function toggleFav(id,e){
+  e.stopPropagation();
+  const favs=getFavs(); const sid=String(id);
+  const idx=favs.indexOf(sid);
+  if(idx>=0) favs.splice(idx,1); else favs.push(sid);
+  saveFavs(favs);
+  renderCategories(document.getElementById('cat-search').value);
+}
+
+// ── SAVED CREDENTIALS ──
+function loadSavedCreds(){
+  try{
+    const saved=JSON.parse(localStorage.getItem('ns_creds')||'null');
+    if(saved){
+      document.getElementById('server-url').value=saved.server||'';
+      document.getElementById('username').value=saved.user||'';
+      document.getElementById('password').value=saved.pass||'';
+      document.getElementById('btn-clear').style.display='inline';
+    }
+  }catch(e){}
+}
+function saveCreds(server,user,pass){
+  localStorage.setItem('ns_creds',JSON.stringify({server,user,pass}));
+  document.getElementById('btn-clear').style.display='inline';
+}
+function clearSaved(){
+  localStorage.removeItem('ns_creds');
+  document.getElementById('server-url').value='';
+  document.getElementById('username').value='';
+  document.getElementById('password').value='';
+  document.getElementById('btn-clear').style.display='none';
+  toast('Τα αποθηκευμένα στοιχεία διαγράφηκαν');
+}
+
+// ── CONNECT ──
+async function connect(){
+  const server=document.getElementById('server-url').value.trim().replace(/\/$/,'');
+  const user=document.getElementById('username').value.trim();
+  const pass=document.getElementById('password').value.trim();
+  hideErr();
+  if(!server||!user||!pass){showErr('Συμπλήρωσε όλα τα πεδία.');return;}
+  document.getElementById('login-loading').style.display='block';
+  S.server=server;S.user=user;S.pass=pass;
+  try{
+    const res=await fetch(apiUrl('get_live_categories'));
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const cats=await res.json();
+    if(!Array.isArray(cats)) throw new Error('Λάθος διαπιστευτήρια.');
+    S.categories=cats;
+    // Αποθήκευση αν είναι τσεκαρισμένο
+    if(document.getElementById('remember-me').checked) saveCreds(server,user,pass);
+    document.getElementById('login-loading').style.display='none';
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('app').style.display='flex';
+    document.getElementById('server-display').innerHTML='<span>●</span> '+server.replace(/https?:\/\//,'');
+    // Φόρτωση πληροφοριών χρήστη (ημερομηνία λήξης)
+    fetch(apiUrl('get_user_info')).then(r=>r.json()).then(info=>{
+      const exp=info?.user_info?.exp_date;
+      if(exp){
+        const d=new Date(+exp*1000);
+        const now=new Date();
+        const daysLeft=Math.ceil((d-now)/86400000);
+        const fmt=d.toLocaleDateString('el-GR',{day:'2-digit',month:'2-digit',year:'numeric'});
+        const color=daysLeft<15?'var(--accent3)':daysLeft<30?'#ffd700':'var(--success)';
+        document.getElementById('expiry-display').innerHTML=
+          `<span style="color:var(--muted)">ΛΗΞΗ</span> <span style="color:${color}">${fmt}</span> <span style="color:var(--muted);font-size:10px">(${daysLeft}μ)</span>`;
+      }
+    }).catch(()=>{});
+    renderCategories();
+    document.getElementById('player').volume=+document.getElementById('vol-slider').value;
+  }catch(e){
+    document.getElementById('login-loading').style.display='none';
+    showErr('Σφάλμα: '+e.message);
+  }
+}
+function apiUrl(action,extra=''){return `${S.server}/player_api.php?username=${enc(S.user)}&password=${enc(S.pass)}&action=${action}${extra}`;}
+function enc(s){return encodeURIComponent(s);}
+function showErr(m){const e=document.getElementById('login-error');e.textContent=m;e.style.display='block';}
+function hideErr(){document.getElementById('login-error').style.display='none';}
+
+function logout(){
+  const v=document.getElementById('player');v.pause();v.src='';v.style.display='none';
+  if(hlsInstance){hlsInstance.destroy();hlsInstance=null;}
+  if(mpegtsPlayer){mpegtsPlayer.destroy();mpegtsPlayer=null;}
+  clearInterval(epgTimer);
+  document.getElementById('player-placeholder').style.display='flex';
+  document.getElementById('app').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+  S={server:'',user:'',pass:'',categories:[],vodCats:[],seriesCats:[],channels:{},currentCat:null,currentChannel:null};
+  vodCache={};seriesCache={};epgData={};currentChId=null;allChannelsCache=null;
+  epgLoadQueue.clear(); if(epgObserver){epgObserver.disconnect();epgObserver=null;}
+  document.getElementById('ch-epg-status').textContent='';
+  document.getElementById('server-display').innerHTML='';
+  document.getElementById('expiry-display').innerHTML='';
+  document.getElementById('categories-list').innerHTML='<div class="sidebar-loading"><div class="spinner"></div></div>';
+  document.getElementById('channels-list').innerHTML='<div class="empty-state"><div class="icon">📡</div><p>Επέλεξε κατηγορία</p></div>';
+}
+
+function switchTab(t){
+  const tabs=['live','vod','series'];
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',tabs[i]===t));
+  document.querySelectorAll('.tab-content').forEach(el=>el.classList.toggle('active',el.id==='tab-'+t));
+}
+
+// ── CATEGORIES with FAVORITES ──
+function renderCategories(filter=''){
+  const favIds=getFavs();
+  let cats=filter?S.categories.filter(c=>c.category_name.toLowerCase().includes(filter.toLowerCase())):S.categories;
+  const favCats=cats.filter(c=>favIds.includes(String(c.category_id)));
+  const otherCats=cats.filter(c=>!favIds.includes(String(c.category_id)));
+
+  const list=document.getElementById('categories-list');
+  if(!cats.length){list.innerHTML='<div class="sidebar-loading">Κανένα αποτέλεσμα</div>';return;}
+
+  let html='';
+  if(favCats.length && !filter){
+    html+='<div class="cat-section-label">⭐ ΑΓΑΠΗΜΕΝΑ</div>';
+    html+=favCats.map(c=>catHTML(c,true)).join('');
+    html+='<div class="cat-section-label">ΟΛΕΣ ΟΙ ΚΑΤΗΓΟΡΙΕΣ</div>';
+  }
+  html+=otherCats.map(c=>catHTML(c,false)).join('');
+  if(filter) html=cats.map(c=>catHTML(c,isFav(c.category_id))).join('');
+  list.innerHTML=html;
+}
+
+function catHTML(c,fav){
+  const active=S.currentCat===c.category_id;
+  return `<div class="cat-item${active?' active':''}" onclick="selectCategory('${esc(c.category_id)}','${esc(c.category_name)}')">
+    <span class="cat-name">${esc(c.category_name)}</span>
+    <button class="fav-btn${fav?' active':''}" onclick="toggleFav('${esc(c.category_id)}',event)" title="${fav?'Αφαίρεση από αγαπημένα':'Προσθήκη στα αγαπημένα'}">${fav?'⭐':'☆'}</button>
+  </div>`;
+}
+
+async function selectCategory(id,name){
+  S.currentCat=id;
+  kbChIdx=0;
+  // Καθάρισε την ουρά EPG φόρτωσης όταν αλλάζεις κατηγορία
+  epgLoadQueue.clear();
+  if(epgObserver){epgObserver.disconnect();epgObserver=null;}
+  renderCategories(document.getElementById('cat-search').value);
+  document.getElementById('channel-panel-title').textContent=name.toUpperCase();
+  const list=document.getElementById('channels-list');
+  list.innerHTML='<div class="empty-state"><div class="spinner"></div></div>';
+  if(S.channels[id]){renderChannels(S.channels[id]);return;}
+  try{
+    const res=await fetch(apiUrl('get_live_streams','&category_id='+enc(id)));
+    S.channels[id]=await res.json();
+    renderChannels(S.channels[id]);
+  }catch(e){list.innerHTML='<div class="empty-state"><div class="icon">⚠</div><p>Σφάλμα φόρτωσης</p></div>';}
+}
+
+let currentChannelList=[];
+let epgObserver=null; // IntersectionObserver for lazy EPG loading
+let epgLoadQueue=new Set();
+let epgLoadTimer=null;
+
+// ── EPG GRID CONSTANTS ──
+const EPG_WINDOW_HOURS = 3;      // αρχικό παράθυρο (για scroll-to-now)
+const EPG_TOTAL_HOURS  = 168;    // 7 μέρες
+const EPG_PX_PER_MIN  = 3;       // pixels ανά λεπτό
+
+// Επιστρέφει την ώρα έναρξης του grid (τρέχουσα ώρα, στρογγυλοποιημένη στο τελευταίο ήμισυ ώρας)
+function epgGridStart(){
+  const now=new Date();
+  const ms=now.getTime();
+  // Στρογγυλοποίηση προς τα κάτω στο τελευταίο μισάωρο
+  const floor30=Math.floor(ms/(30*60000))*(30*60000);
+  return new Date(floor30);
+}
+
+// Μετατρέπει χρόνο σε pixel offset από το gridStart
+function timeToX(t, gridStart){
+  const diffMin=(t-gridStart)/60000;
+  return diffMin*EPG_PX_PER_MIN;
+}
+
+function renderChannels(channels,filter=''){
+  currentChannelList=channels;
+  const filtered=filter?channels.filter(c=>c.name.toLowerCase().includes(filter.toLowerCase())):channels;
+  const list=document.getElementById('channels-list');
+  const chPanel=document.getElementById('epg-ch-panel-list');
+  if(!filtered.length){
+    list.innerHTML='<div class="empty-state"><div class="icon">📡</div><p>Κανένα κανάλι</p></div>';
+    if(chPanel) chPanel.innerHTML='';
+    renderTimeRuler();
+    return;
+  }
+
+  renderTimeRuler();
+
+  // Αριστερό panel: μόνο ονόματα καναλιών
+  if(chPanel){
+    chPanel.innerHTML=filtered.map(ch=>{
+      const isActive=S.currentChannel===ch.stream_id;
+      return `<div class="ch-left${isActive?' active-ch':''}" data-stream-id="${ch.stream_id}" onclick='openMpvDirect(${JSON.stringify(ch)})'>
+        <div class="ch-logo">${ch.stream_icon?`<img src="${esc(ch.stream_icon)}" loading="lazy" onerror="this.style.display='none'"/>`:'📺'}</div>
+        <div class="ch-name" title="${esc(ch.name)}">${esc(ch.name)}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // Δεξί panel: EPG rows χωρίς ch-left
+  list.innerHTML=filtered.map(ch=>{
+    const hasEpg=epgData[ch.stream_id]!==undefined && epgData[ch.stream_id]!==null;
+    const epgLoading=epgData[ch.stream_id]===undefined;
+    return channelHTML(ch, hasEpg, epgLoading);
+  }).join('');
+
+  setupEpgObserver(list);
+  updateEpgStatusBar(filtered);
+  scrollEpgToNow();
+  syncEpgScroll();
+}
+
+// Σχεδιάζει τη sticky γραμμή ωρών
+function renderTimeRuler(){
+  const rulerEl=document.getElementById('epg-ruler-times');
+  if(!rulerEl) return;
+  const gStart=epgGridStart();
+  const totalMin=EPG_TOTAL_HOURS*60;
+  const totalPx=totalMin*EPG_PX_PER_MIN;
+
+  rulerEl.style.width=totalPx+'px';
+  rulerEl.style.minWidth=totalPx+'px';
+  rulerEl.style.position='relative';
+
+  // Ticks κάθε 30 λεπτά
+  const DAYS_GR=['ΚΥΡ','ΔΕΥ','ΤΡΙ','ΤΕΤ','ΠΕΜ','ΠΑΡ','ΣΑΒ'];
+  const today=new Date(); today.setHours(0,0,0,0);
+  let html='';
+
+  // Day banners — ένα για κάθε νέα μέρα μέσα στο grid
+  let lastDayKey='';
+  let dayBannerStart=0;
+  for(let m=0;m<=totalMin;m+=30){
+    const t=new Date(gStart.getTime()+m*60000);
+    const dayKey=t.toDateString();
+    if(dayKey!==lastDayKey){
+      // Κλείνουμε το προηγούμενο banner (αν υπάρχει) και ανοίγουμε νέο
+      const x=m*EPG_PX_PER_MIN;
+      if(lastDayKey!==''){
+        // patch: θα το βάλουμε παρακάτω με σωστό πλάτος
+      }
+      lastDayKey=dayKey;
+      dayBannerStart=x;
+
+      const isToday=(t.setHours(0,0,0,0),t.getTime())===today.getTime();
+      // restore t
+      const t2=new Date(gStart.getTime()+m*60000);
+      const dayName=DAYS_GR[t2.getDay()];
+      const dateStr=`${String(t2.getDate()).padStart(2,'0')}/${String(t2.getMonth()+1).padStart(2,'0')}`;
+      // Βρίσκουμε πλάτος: μέχρι την επόμενη αλλαγή μέρας ή το τέλος
+      let nextDayM=totalMin;
+      for(let nm=m+30;nm<=totalMin;nm+=30){
+        const nt=new Date(gStart.getTime()+nm*60000);
+        if(nt.toDateString()!==dayKey){nextDayM=nm;break;}
+      }
+      const bannerW=nextDayM*EPG_PX_PER_MIN - x;
+      html+=`<div class="epg-day-banner ${isToday?'day-today':'day-other'}" style="left:${x}px;width:${bannerW}px;">${dayName} ${dateStr}</div>`;
+    }
+  }
+
+  // Ticks ωρών
+  for(let m=0;m<=totalMin;m+=30){
+    const x=m*EPG_PX_PER_MIN;
+    const t=new Date(gStart.getTime()+m*60000);
+    const label=fmtTime(t);
+    const isHour=t.getMinutes()===0;
+    const isNow=Math.abs(new Date()-t)<15*60000;
+    html+=`<div class="epg-ruler-tick${isNow?' tick-now':''}${isHour?' tick-hour':''}" style="left:${x}px;position:absolute;">
+      <div class="epg-ruler-tick-line" style="height:${isHour?'12':'6'}px;"></div>
+      <div class="epg-ruler-tick-label" style="opacity:${isHour?'1':'.55'}">${label}</div>
+    </div>`;
+  }
+
+  // Γραμμή "ΤΩΡΑ"
+  const nowX=timeToX(new Date(),gStart);
+  if(nowX>=0 && nowX<=totalPx){
+    html+=`<div class="epg-now-line" style="left:${nowX}px;"></div>`;
+  }
+
+  rulerEl.innerHTML=html;
+  document.getElementById('epg-grid-inner').style.minWidth=(totalPx+64)+'px';
+}
+
+// Scroll ώστε η τρέχουσα ώρα να φαίνεται αριστερά (με μικρό offset)
+function scrollEpgToNow(){
+  const area=document.getElementById('epg-scroll-area');
+  if(!area) return;
+  const gStart=epgGridStart();
+  const nowX=timeToX(new Date(),gStart);
+  // Scroll ώστε το NOW να είναι ~30px από αριστερά (αφαιρούμε το channel label width)
+  area.scrollLeft=Math.max(0, nowX-30);
+}
+
+function channelHTML(ch, hasEpg, loading){
+  const isActive = S.currentChannel===ch.stream_id;
+  const gStart=epgGridStart();
+  const gEnd=new Date(gStart.getTime()+EPG_TOTAL_HOURS*60*60000);
+  const totalPx=EPG_TOTAL_HOURS*60*EPG_PX_PER_MIN;
+
+  let rowContent='';
+  if(loading){
+    rowContent=`<div class="ch-epg-loading">⏳ φόρτωση...</div>`;
+  } else if(hasEpg){
+    const list = epgData[ch.stream_id]||[];
+    const nowT = new Date();
+    // Φιλτράρουμε εκπομπές που εμπίπτουν στο παράθυρο
+    const visible = list.filter(e=>e.stop>gStart && e.start<gEnd);
+    if(visible.length){
+      rowContent = visible.map(e=>{
+        const isNow = e.start<=nowT && e.stop>nowT;
+        const isPast = e.stop<=nowT;
+
+        // Υπολογισμός θέσης και πλάτους
+        const slotStart = e.start<gStart ? gStart : e.start;
+        const slotEnd   = e.stop>gEnd    ? gEnd   : e.stop;
+        const x  = timeToX(slotStart, gStart);
+        const w  = Math.max(4, timeToX(slotEnd, gStart) - x - 2); // -2 gap
+
+        const total=e.stop-e.start;
+        const elapsed=nowT-e.start;
+        const pct=isNow?Math.min(100,Math.max(0,(elapsed/total)*100)):0;
+        const bar=isNow?`<div class="slot-prog-bar"><div class="slot-prog-fill" style="width:${pct}%"></div></div>`:'';
+
+        const timeStr=isNow?`🔴 ${fmtTime(e.start)}–${fmtTime(e.stop)}`:`${fmtTime(e.start)}–${fmtTime(e.stop)}`;
+        const cls=isPast?'slot-past':isNow?'slot-now':'slot-next';
+
+        return `<div class="ch-epg-slot ${cls}"
+          style="left:${x}px;width:${w}px;"
+          data-ch="${esc(ch.name)}"
+          data-title="${esc(e.title)}"
+          data-desc="${esc(e.desc||'')}"
+          data-start="${e.start.getTime()}"
+          data-stop="${e.stop.getTime()}"
+          data-isnow="${isNow}">
+          <div class="slot-time">${timeStr}</div>
+          <div class="slot-title">${esc(e.title)}</div>
+          ${bar}
+        </div>`;
+      }).join('');
+    } else {
+      rowContent=`<div class="ch-epg-none">— Δεν υπάρχει EPG —</div>`;
+    }
+  } else {
+    rowContent=`<div class="ch-epg-loading">📅 αναμονή...</div>`;
+  }
+
+  return `<div class="channel-item${isActive?' active':''}" data-stream-id="${ch.stream_id}">
+    <div class="ch-epg-row" style="width:${totalPx}px;min-width:${totalPx}px;">
+      ${rowContent}
+    </div>
+    <div class="ch-actions">
+      <button class="ch-mpv-btn" onclick='event.stopPropagation();closeMpv();playLive(${JSON.stringify(ch)})' title="Browser player">▶WEB</button>
+      <button class="ch-mpv-btn" style="background:rgba(123,47,255,.12);border-color:rgba(123,47,255,.3);color:var(--accent2);" onclick='event.stopPropagation();openMpvDirect(${JSON.stringify(ch)})' title="MPV">▶MPV</button>
+    </div>
+  </div>`;
+}
+
+// channelHTML — defined above in EPG GRID section
+
+// ── EPG POPUP — event delegation on channels-list ──
+document.addEventListener('click', e=>{
+  const slot = e.target.closest('.ch-epg-slot');
+  if(slot){
+    e.stopPropagation();
+    const popup=document.getElementById('epg-popup');
+    const start=new Date(+slot.dataset.start);
+    const stop=new Date(+slot.dataset.stop);
+    const durMin=Math.round((stop-start)/60000);
+    const h=Math.floor(durMin/60), m=durMin%60;
+    const durStr=h>0?`${h}ω ${m}λ`:`${m} λεπτά`;
+    const isNow=slot.dataset.isnow==='true';
+
+    document.getElementById('epg-popup-ch').textContent=slot.dataset.ch||'';
+    document.getElementById('epg-popup-badge').innerHTML=isNow?'<div class="epg-popup-now-badge">🔴 ΠΑΙΖΕΙ ΤΩΡΑ</div>':'';
+    document.getElementById('epg-popup-title').textContent=slot.dataset.title||'';
+    document.getElementById('epg-popup-time').textContent=`${fmtTime(start)} – ${fmtTime(stop)}`;
+    document.getElementById('epg-popup-dur').textContent=`Διάρκεια: ${durStr}`;
+    const desc=(slot.dataset.desc||'').trim();
+    document.getElementById('epg-popup-desc-wrap').innerHTML=desc
+      ?`<div class="epg-popup-desc">${esc(desc)}</div>`
+      :`<div class="epg-popup-nodesc">Δεν υπάρχει περιγραφή.</div>`;
+
+    popup.style.display='block';
+    // Τοποθέτηση κοντά στο κλικ αλλά μέσα στην οθόνη
+    setTimeout(()=>{
+      const pw=popup.offsetWidth, ph=popup.offsetHeight;
+      let x=e.clientX+12, y=e.clientY-20;
+      if(x+pw>window.innerWidth-10) x=e.clientX-pw-12;
+      if(y+ph>window.innerHeight-10) y=window.innerHeight-ph-10;
+      if(y<10) y=10;
+      popup.style.left=x+'px';
+      popup.style.top=y+'px';
+    },0);
+    return;
+  }
+  // Κλείσιμο popup με κλικ εκτός
+  const popup=document.getElementById('epg-popup');
+  if(popup && popup.style.display!=='none' && !popup.closest || (popup && !popup.contains(e.target))){
+    popup.style.display='none';
+  }
+});
+
+function closeEpgPopup(){
+  document.getElementById('epg-popup').style.display='none';
+}
+
+function setupEpgObserver(container){
+  if(epgObserver){ epgObserver.disconnect(); epgObserver=null; }
+  // Χρησιμοποιούμε το epg-scroll-area ως root (εκεί γίνεται το scroll)
+  const scrollRoot=document.getElementById('epg-scroll-area');
+  epgObserver=new IntersectionObserver((entries)=>{
+    entries.forEach(entry=>{
+      if(!entry.isIntersecting) return;
+      const streamId=entry.target.dataset.streamId;
+      if(!streamId) return;
+      if(epgData[streamId]===undefined){
+        epgLoadQueue.add(streamId);
+        scheduleEpgBatch();
+      }
+    });
+  },{root:scrollRoot, rootMargin:'200px 0px', threshold:0});
+
+  container.querySelectorAll('.channel-item[data-stream-id]').forEach(el=>{
+    epgObserver.observe(el);
+  });
+}
+
+function scheduleEpgBatch(){
+  if(epgLoadTimer) return;
+  epgLoadTimer=setTimeout(()=>{
+    epgLoadTimer=null;
+    const batch=[...epgLoadQueue].slice(0,20); // αυξήθηκε σε 20
+    batch.forEach(id=>epgLoadQueue.delete(id));
+    Promise.all(batch.map(id=>loadEpgForInline(id)));
+    // Αν υπάρχουν κι άλλα στην ουρά, ξανακάλεσε
+    if(epgLoadQueue.size>0) scheduleEpgBatch();
+  },80);
+}
+
+async function loadEpgForInline(streamId){
+  epgData[streamId]=null; // null = loading in progress
+  await loadEpg(streamId);
+  // Ενημέρωσε μόνο το συγκεκριμένο channel-item αν είναι ακόμα ορατό
+  updateChannelEpgCell(streamId);
+  updateEpgStatusBarCount();
+}
+
+function updateChannelEpgCell(streamId){
+  const el=document.querySelector(`.channel-item[data-stream-id="${streamId}"]`);
+  if(!el) return;
+  const ch=currentChannelList.find(c=>String(c.stream_id)===String(streamId));
+  if(!ch) return;
+  const hasEpg=epgData[streamId]!==null && epgData[streamId]!==undefined;
+  const newEl=document.createElement('div');
+  newEl.innerHTML=channelHTML(ch,hasEpg,false);
+  const newItem=newEl.firstElementChild;
+  el.replaceWith(newItem);
+  if(epgObserver) epgObserver.observe(newItem);
+}
+
+function updateEpgStatusBarCount(){
+  const loaded=Object.values(epgData).filter(v=>v!==undefined&&v!==null).length;
+  const total=currentChannelList.length;
+  const el=document.getElementById('ch-epg-status');
+  if(!el) return;
+  if(loaded>=total){ el.innerHTML='📅 EPG <span>✓ '+loaded+'</span>'; }
+  else { el.textContent=`📅 ${loaded}/${total}`; }
+}
+
+function updateEpgStatusBar(filtered){
+  const el=document.getElementById('ch-epg-status');
+  if(!el) return;
+  const loaded=filtered.filter(ch=>epgData[ch.stream_id]!==undefined&&epgData[ch.stream_id]!==null).length;
+  if(loaded===0){ el.textContent=''; }
+  else if(loaded>=filtered.length){ el.innerHTML='📅 EPG <span>✓</span>'; }
+  else { el.textContent=`📅 ${loaded}/${filtered.length}`; }
+}
+
+function filterChannels(v){if(S.currentCat&&S.channels[S.currentCat])renderChannels(S.channels[S.currentCat],v);}
+
+
+
+// ── EPG ──
+async function loadEpg(streamId){
+  if(epgData[streamId]) return;
+  try{
+    // 1ο: get_simple_data_table — με limit για να πάρουμε έως 7 μέρες
+    const res=await fetch(apiUrl('get_simple_data_table','&stream_id='+enc(streamId)+'&limit=300'));
+    const data=await res.json();
+
+    // get_simple_data_table επιστρέφει: { epg_listings: [...] } ή { listing: [...] } ή απευθείας array
+    const listings = data?.epg_listings || data?.listing || data?.data || (Array.isArray(data)?data:[]);
+
+    if(listings.length){
+      epgData[streamId]=listings.map(e=>{
+        // get_simple_data_table χρησιμοποιεί start/end ως Unix timestamps ή ως strings
+        const start = e.start_timestamp ? new Date(+e.start_timestamp*1000)
+                    : e.start && /^\d+$/.test(String(e.start)) ? new Date(+e.start*1000)
+                    : new Date((e.start||'').replace(' ','T')+'Z');
+        const stop  = e.stop_timestamp  ? new Date(+e.stop_timestamp*1000)
+                    : e.end_timestamp   ? new Date(+e.end_timestamp*1000)
+                    : e.stop && /^\d+$/.test(String(e.stop)) ? new Date(+e.stop*1000)
+                    : e.end  && /^\d+$/.test(String(e.end))  ? new Date(+e.end*1000)
+                    : new Date((e.end||e.stop||'').replace(' ','T')+'Z');
+        return {
+          title: atob_safe(e.title),
+          desc:  atob_safe(e.description||e.desc||''),
+          start,
+          stop,
+        };
+      }).filter(e=>e.start&&e.stop&&!isNaN(e.start)&&!isNaN(e.stop))
+        .sort((a,b)=>a.start-b.start);
+      console.log('[EPG get_simple_data_table]', streamId, epgData[streamId].length, 'εκπομπές');
+      return;
+    }
+  }catch(e){ console.warn('[EPG get_simple_data_table error]', e); }
+
+  try{
+    // 2ο fallback: get_short_epg με μεγάλο limit
+    const res2=await fetch(apiUrl('get_short_epg','&stream_id='+enc(streamId)+'&limit=300'));
+    const data2=await res2.json();
+    epgData[streamId]=(data2?.epg_listings||[]).map(e=>{
+      const start = e.start_timestamp ? new Date(+e.start_timestamp*1000)
+                  : new Date((e.start||'').replace(' ','T')+'Z');
+      const stop  = e.stop_timestamp  ? new Date(+e.stop_timestamp*1000)
+                  : e.end_timestamp   ? new Date(+e.end_timestamp*1000)
+                  : new Date((e.end||e.stop||'').replace(' ','T')+'Z');
+      return { title:atob_safe(e.title), desc:atob_safe(e.description||''), start, stop };
+    }).filter(e=>e.start&&e.stop&&!isNaN(e.start)&&!isNaN(e.stop));
+    console.log('[EPG fallback get_short_epg]', streamId, epgData[streamId].length, 'εκπομπές');
+  }catch(e){ console.error('[EPG error]', e); }
+}
+
+function atob_safe(str){
+  try{ return decodeURIComponent(escape(atob(str))); }catch{ return str||''; }
+}
+
+function getEpgNow(sid){
+  const list=epgData[sid]; if(!list) return null;
+  const now=new Date();
+  return list.find(e=>e.start<=now&&e.stop>now)||null;
+}
+function getEpgNext(sid){
+  const list=epgData[sid]; if(!list) return null;
+  const now=new Date();
+  return list.find(e=>e.start>now)||null;
+}
+
+function updateEpgBar(){
+  if(!currentChId) return;
+  const now=getEpgNow(currentChId);
+  const next=getEpgNext(currentChId);
+  if(now){
+    document.getElementById('epg-now-title').textContent=now.title;
+    const total=now.stop-now.start;
+    const elapsed=new Date()-now.start;
+    const pct=Math.min(100,Math.max(0,(elapsed/total)*100));
+    document.getElementById('epg-progress').style.width=pct+'%';
+    const remain=Math.max(0,Math.round((now.stop-new Date())/60000));
+    document.getElementById('epg-now-time').textContent=`${fmtTime(now.start)}–${fmtTime(now.stop)} (${remain}' απομένουν)`;
+    document.getElementById('epg-next').innerHTML=next?`Επόμενο: <span>${esc(next.title)}</span> στις ${fmtTime(next.start)}`:'';
+  } else {
+    document.getElementById('epg-now-title').textContent='Δεν υπάρχουν EPG δεδομένα';
+    document.getElementById('epg-now-time').textContent='';
+    document.getElementById('epg-progress').style.width='0%';
+    document.getElementById('epg-next').innerHTML='';
+  }
+  renderEpgSchedule();
+  // Ανανέωσε και το inline cell στη λίστα
+  updateChannelEpgCell(currentChId);
+}
+
+function renderEpgSchedule(){
+  const list=epgData[currentChId];
+  const sched=document.getElementById('epg-schedule');
+  if(!list||!list.length){sched.innerHTML='<div style="padding:8px 10px;font-size:12px;color:var(--muted)">Δεν υπάρχουν δεδομένα</div>';return;}
+  const nowT=new Date();
+  const todayStr=nowT.toDateString();
+  const tomorrowStr=new Date(nowT.getTime()+86400000).toDateString();
+
+  let lastDay=null;
+  let html='';
+  list.forEach(e=>{
+    const isNow=e.start<=nowT&&e.stop>nowT;
+    const isPast=e.stop<=nowT;
+    const desc=e.desc?`<div class="epg-s-desc">${esc(e.desc)}</div>`:'';
+
+    // Ημερομηνία separator
+    const dayStr=e.start.toDateString();
+    if(dayStr!==lastDay){
+      lastDay=dayStr;
+      const dayLabel=dayStr===todayStr?'📅 ΣΗΜΕΡΑ '+e.start.toLocaleDateString('el-GR',{day:'2-digit',month:'2-digit'})
+        :dayStr===tomorrowStr?'📅 ΑΥΡΙΟ '+e.start.toLocaleDateString('el-GR',{day:'2-digit',month:'2-digit'})
+        :'📅 '+e.start.toLocaleDateString('el-GR',{weekday:'long',day:'2-digit',month:'2-digit'}).toUpperCase();
+      html+=`<div style="font-size:10px;font-weight:700;letter-spacing:2px;color:var(--accent2);padding:10px 10px 4px;text-transform:uppercase;border-top:1px solid var(--border);margin-top:4px;">${dayLabel}</div>`;
+    }
+
+    html+=`<div class="epg-schedule-item${isNow?' now':''}" style="opacity:${isPast?'.4':'1'}" onclick="toggleEpgItem(this)">
+      <div class="epg-s-time">${fmtTime(e.start)} – ${fmtTime(e.stop)}${isNow?' 🔴 ΤΩΡΑ':''}</div>
+      <div class="epg-s-title">${esc(e.title)}</div>
+      ${desc}
+    </div>`;
+  });
+  sched.innerHTML=html;
+
+  // Scroll στο τρέχον πρόγραμμα
+  setTimeout(()=>{
+    const nowEl=sched.querySelector('.now');
+    if(nowEl) nowEl.scrollIntoView({block:'nearest'});
+  },50);
+}
+
+function toggleEpgItem(el){
+  el.classList.toggle('open');
+}
+
+function toggleEpgBar(){
+  epgBarOpen=!epgBarOpen;
+  document.getElementById('epg-bar').classList.toggle('expanded',epgBarOpen);
+}
+
+function fmtTime(d){
+  if(!d) return '';
+  return d.toLocaleTimeString('el-GR',{hour:'2-digit',minute:'2-digit'});
+}
+
+// ── LIVE PLAY ──
+function playLive(ch){
+  S.currentChannel=ch.stream_id;
+  currentChId=ch.stream_id;
+  if(S.currentCat&&S.channels[S.currentCat]) renderChannels(S.channels[S.currentCat],document.querySelector('.ch-search-mini').value);
+  const ext=ch.container_extension||'ts';
+  const url=`${S.server}/live/${enc(S.user)}/${enc(S.pass)}/${ch.stream_id}.${ext}`;
+  doPlay(url,ch.name);
+  document.getElementById('now-playing-info').innerHTML=`<div class="channel-name">${esc(ch.name)}</div>`;
+  showChannelOverlay(ch);
+  // Load EPG
+  epgData[ch.stream_id]=null;
+  loadEpg(ch.stream_id).then(()=>{
+    updateEpgBar();
+    // refresh channel list για EPG titles
+    if(S.currentCat&&S.channels[S.currentCat]) renderChannels(S.channels[S.currentCat],document.querySelector('.ch-search-mini').value);
+  });
+  clearInterval(epgTimer);
+  epgTimer=setInterval(updateEpgBar,30000);
+}
+
+// ── VOD ──
+async function loadVodCats(){
+  try{const res=await fetch(apiUrl('get_vod_categories'));S.vodCats=await res.json();renderVodCats();}
+  catch(e){document.getElementById('vod-categories-list').innerHTML='<div class="sidebar-loading">Σφάλμα</div>';}
+}
+function renderVodCats(filter=''){
+  const cats=filter?S.vodCats.filter(c=>c.category_name.toLowerCase().includes(filter.toLowerCase())):S.vodCats;
+  const list=document.getElementById('vod-categories-list');
+  list.innerHTML=cats.map(c=>`<div class="cat-item" onclick="loadVodStreams('${esc(c.category_id)}','${esc(c.category_name)}')"><span class="cat-name">${esc(c.category_name)}</span></div>`).join('')||'<div class="sidebar-loading">Κανένα αποτέλεσμα</div>';
+}
+function filterVodCats(v){renderVodCats(v);}
+
+async function loadVodStreams(id,name){
+  hilightCat('vod-categories-list',name);
+  const grid=document.getElementById('vod-grid');
+  grid.innerHTML='<div class="empty-state" style="grid-column:1/-1"><div class="spinner"></div></div>';
+  if(vodCache[id]){renderVodGrid(vodCache[id]);return;}
+  try{const res=await fetch(apiUrl('get_vod_streams','&category_id='+enc(id)));vodCache[id]=await res.json();renderVodGrid(vodCache[id]);}
+  catch(e){grid.innerHTML='<div class="empty-state" style="grid-column:1/-1"><div class="icon">⚠</div><p>Σφάλμα</p></div>';}
+}
+function renderVodGrid(streams){
+  const grid=document.getElementById('vod-grid');
+  if(!streams.length){grid.innerHTML='<div class="empty-state" style="grid-column:1/-1"><div class="icon">🎬</div><p>Κανένα αποτέλεσμα</p></div>';return;}
+  grid.innerHTML=streams.slice(0,200).map(s=>`
+    <div class="vod-card" onclick='playVod(${JSON.stringify(s)})'>
+      <div class="vod-thumb">${s.stream_icon?`<img src="${esc(s.stream_icon)}" loading="lazy" onerror="this.style.display='none'"/>`:'<div class="no-img">🎬</div>'}</div>
+      <div class="vod-meta"><div class="vod-title">${esc(s.name)}</div>${s.rating?`<div class="vod-rating">★ ${esc(s.rating)}</div>`:''}</div>
+    </div>`).join('');
+}
+function playVod(s){
+  const ext=s.container_extension||'mp4';
+  const url=`${S.server}/movie/${enc(S.user)}/${enc(S.pass)}/${s.stream_id}.${ext}`;
+  switchTab('live'); currentChId=null;
+  clearInterval(epgTimer);
+  document.getElementById('epg-now-title').textContent='—';
+  document.getElementById('epg-progress').style.width='0%';
+  document.getElementById('epg-bar').classList.remove('expanded');
+  epgBarOpen=false;
+  setTimeout(()=>{doPlay(url,'🎬 '+s.name);document.getElementById('now-playing-info').innerHTML=`<div class="channel-name">🎬 ${esc(s.name)}</div>`;},80);
+}
+
+// ── SERIES ──
+async function loadSeriesCats(){
+  try{const res=await fetch(apiUrl('get_series_categories'));S.seriesCats=await res.json();renderSeriesCats();}
+  catch(e){document.getElementById('series-categories-list').innerHTML='<div class="sidebar-loading">Σφάλμα</div>';}
+}
+function renderSeriesCats(filter=''){
+  const cats=filter?S.seriesCats.filter(c=>c.category_name.toLowerCase().includes(filter.toLowerCase())):S.seriesCats;
+  const list=document.getElementById('series-categories-list');
+  list.innerHTML=cats.map(c=>`<div class="cat-item" onclick="loadSeriesStreams('${esc(c.category_id)}','${esc(c.category_name)}')"><span class="cat-name">${esc(c.category_name)}</span></div>`).join('')||'<div class="sidebar-loading">Κανένα αποτέλεσμα</div>';
+}
+function filterSeriesCats(v){renderSeriesCats(v);}
+async function loadSeriesStreams(id,name){
+  hilightCat('series-categories-list',name);
+  const grid=document.getElementById('series-grid');
+  grid.innerHTML='<div class="empty-state" style="grid-column:1/-1"><div class="spinner"></div></div>';
+  if(seriesCache[id]){renderSeriesGrid(seriesCache[id]);return;}
+  try{const res=await fetch(apiUrl('get_series','&category_id='+enc(id)));seriesCache[id]=await res.json();renderSeriesGrid(seriesCache[id]);}
+  catch(e){grid.innerHTML='<div class="empty-state" style="grid-column:1/-1"><div class="icon">⚠</div><p>Σφάλμα</p></div>';}
+}
+function renderSeriesGrid(series){
+  const grid=document.getElementById('series-grid');
+  if(!series.length){grid.innerHTML='<div class="empty-state" style="grid-column:1/-1"><div class="icon">📼</div><p>Κανένα αποτέλεσμα</p></div>';return;}
+  grid.innerHTML=series.slice(0,200).map(s=>`
+    <div class="vod-card">
+      <div class="vod-thumb">${s.cover?`<img src="${esc(s.cover)}" loading="lazy" onerror="this.style.display='none'"/>`:'<div class="no-img">📼</div>'}</div>
+      <div class="vod-meta"><div class="vod-title">${esc(s.name)}</div>${s.rating?`<div class="vod-rating">★ ${esc(s.rating)}</div>`:''}</div>
+    </div>`).join('');
+}
+
+// ── PLAYER ──
+let hlsInstance=null,mpegtsPlayer=null;
+let mpegtsTimer=null;
+
+// ── STALL DETECTION (μόνο εμφάνιση ένδειξης, χωρίς auto-reconnect) ──
+let stallCheckInterval=null;
+let lastCurrentTime=0;
+
+function startStallDetection(vid){
+  stopStallDetection();
+  lastCurrentTime=vid.currentTime;
+  let stallCount=0;
+
+  stallCheckInterval=setInterval(()=>{
+    if(vid.paused || vid.ended || !currentStreamUrl) return;
+    if(vid.currentTime===lastCurrentTime && vid.readyState>=2){
+      stallCount++;
+      if(stallCount>=2){
+        // 10 δευτερόλεπτα stall → δείξε ένδειξη μόνο
+        console.log('[Stall] Stream φαίνεται κολλημένο');
+        showReconnectIndicator(true);
+      }
+    } else {
+      lastCurrentTime=vid.currentTime;
+      stallCount=0;
+      showReconnectIndicator(false);
+    }
+  },5000);
+}
+
+function stopStallDetection(){
+  clearInterval(stallCheckInterval); stallCheckInterval=null;
+}
+
+function showReconnectIndicator(show){
+  let el=document.getElementById('reconnect-indicator');
+  if(!el){
+    el=document.createElement('div');
+    el.id='reconnect-indicator';
+    el.style.cssText='position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:60;background:rgba(7,8,15,.88);border:1px solid var(--border);border-radius:10px;padding:16px 24px;display:none;align-items:center;gap:12px;font-family:Rajdhani,sans-serif;font-size:14px;letter-spacing:1px;color:var(--text);backdrop-filter:blur(8px);pointer-events:none;';
+    el.innerHTML='<div style="width:18px;height:18px;border-radius:50%;border:2px solid var(--border);border-top-color:var(--accent);animation:spin .8s linear infinite;flex-shrink:0"></div><span>⚠ Το stream φαίνεται κολλημένο</span>';
+    document.getElementById('player-container').appendChild(el);
+  }
+  el.style.display=show?'flex':'none';
+}
+
+function doPlay(url,label){
+  const vid=document.getElementById('player');
+  document.getElementById('player-placeholder').style.display='none';
+  vid.style.display='block';
+  const vol=+document.getElementById('vol-slider').value;
+
+  // Καθάρισμα προηγούμενου
+  stopStallDetection();
+  showReconnectIndicator(false);
+  if(mpegtsTimer){clearTimeout(mpegtsTimer);mpegtsTimer=null;}
+  if(hlsInstance){try{hlsInstance.destroy();}catch(e){} hlsInstance=null;}
+  if(mpegtsPlayer){try{mpegtsPlayer.unload();mpegtsPlayer.detachMediaElement();mpegtsPlayer.destroy();}catch(e){} mpegtsPlayer=null;}
+  vid.pause();
+  vid.removeAttribute('src');
+  vid.load();
+
+  currentStreamUrl=url;
+  const extBtn=document.getElementById('ext-btn');
+  if(extBtn) extBtn.style.display='';
+  const stopBtn=document.getElementById('stop-btn');
+  if(stopBtn) stopBtn.style.display='';
+  const pauseBtn=document.getElementById('pause-btn');
+  if(pauseBtn){pauseBtn.textContent='⏸';pauseBtn.classList.remove('pause-active');}
+  startStreamTimer();
+  toast('▶ '+label);
+
+  const urlLow=url.toLowerCase();
+  const isM3u8=urlLow.includes('.m3u8');
+  const isTs=urlLow.includes('.ts');
+  if(isM3u8){
+    if(Hls.isSupported()) playWithHls(vid,url,vol);
+    else playNative(vid,url,vol);
+  } else if(isTs){
+    if(typeof mpegts!=='undefined'&&mpegts.getFeatureList().mseLivePlayback) playWithMpegts(vid,url,vol);
+    else playWithHls(vid,url,vol);
+  } else {
+    playNativeWithFallback(vid,url,vol);
+  }
+
+  // Ξεκίνα stall detection μετά από 5 δευτερόλεπτα (να προλάβει να φορτώσει)
+  setTimeout(()=>{ if(currentStreamUrl===url) startStallDetection(vid); },5000);
+}
+
+function playWithHls(vid,url,vol){
+  hlsInstance=new Hls({enableWorker:true,lowLatencyMode:false,maxBufferLength:30,maxMaxBufferLength:60,maxBufferSize:60*1000*1000,maxBufferHole:0.5,highBufferWatchdogPeriod:4,nudgeMaxRetry:5,nudgeOffset:0.2,startLevel:-1,abrEwmaDefaultEstimate:50000000,fragLoadingTimeOut:20000,manifestLoadingTimeOut:20000,levelLoadingTimeOut:20000,fragLoadingMaxRetry:6,manifestLoadingMaxRetry:4,
+    // Καθαρισμός παλιού buffer για μακρόχρονες συνεδρίες
+    backBufferLength:30});
+  hlsInstance.loadSource(url);
+  hlsInstance.attachMedia(vid);
+  hlsInstance.on(Hls.Events.MANIFEST_PARSED,()=>{vid.volume=vol;vid.play().catch(()=>{});});
+  hlsInstance.on(Hls.Events.ERROR,(e,data)=>{
+    if(data.fatal){
+      if(data.type===Hls.ErrorTypes.NETWORK_ERROR){
+        hlsInstance.startLoad();
+      } else {
+        hlsInstance.destroy();hlsInstance=null;
+        playNative(vid,url,vol);
+      }
+    }
+  });
+}
+
+function playWithMpegts(vid,url,vol){
+  console.log('[Player] Δοκιμή mpegts:', url);
+
+  mpegtsPlayer=mpegts.createPlayer(
+    {type:'mpegts',isLive:true,url:url},
+    {enableWorker:true,
+     enableStashBuffer:true,
+     stashInitialSize:1024*512,
+     liveBufferLatencyChasing:false,
+     liveBufferLatencyMaxLatency:10.0,
+     liveBufferLatencyMinRemain:5.0,
+     autoCleanupSourceBuffer:true,
+     autoCleanupMaxBackwardDuration:20,
+     autoCleanupMinBackwardDuration:10,
+     fixAudioTimestampGap:true,
+     forceSeekableRange:true,
+     seekType:'range',
+     rangeLoadZeroStart:true}
+  );
+  mpegtsPlayer.attachMediaElement(vid);
+  mpegtsPlayer.load();
+  vid.volume=vol;
+
+  vid.addEventListener('canplay',function onCanPlay(){
+    vid.removeEventListener('canplay',onCanPlay);
+    if(mpegtsTimer){clearTimeout(mpegtsTimer);mpegtsTimer=null;}
+    vid.play().catch(err=>{
+      console.warn('[Player] canplay play() failed:', err);
+      vid.muted=true;
+      vid.play().catch(()=>{});
+    });
+  },{once:true});
+
+  mpegtsTimer=setTimeout(()=>{
+    mpegtsTimer=null;
+    if(vid.readyState<2 && mpegtsPlayer){
+      console.log('[Player] mpegts timeout → HLS');
+      mpegtsPlayer.destroy();mpegtsPlayer=null;
+      if(Hls.isSupported()) playWithHls(vid,url,vol);
+      else playNative(vid,url,vol);
+    }
+  },5000);
+
+  mpegtsPlayer.on(mpegts.Events.ERROR,(errType,errDetail,errInfo)=>{
+    console.warn('[Player] mpegts error:', errType, errDetail, errInfo);
+    if(mpegtsTimer){clearTimeout(mpegtsTimer);mpegtsTimer=null;}
+    if(errType===mpegts.ErrorTypes.MEDIA_ERROR||errType===mpegts.ErrorTypes.OTHER_ERROR){
+      if(mpegtsPlayer){mpegtsPlayer.destroy();mpegtsPlayer=null;}
+      if(Hls.isSupported()) playWithHls(vid,url,vol);
+      else playNative(vid,url,vol);
+    } else {
+      setTimeout(()=>{if(mpegtsPlayer){mpegtsPlayer.unload();mpegtsPlayer.load();}},2000);
+    }
+  });
+}
+function playNativeWithFallback(vid,url,vol){
+  console.log('[Player] Δοκιμή native:', url);
+  vid.src=url; vid.volume=vol; vid.load();
+
+  const onCanPlay=()=>{ cleanup(); vid.play().catch(()=>{ vid.muted=true; vid.play().catch(()=>{}); }); };
+  const onError=()=>{ cleanup(); console.log('[Player] native error → mpegts'); tryMpegts(); };
+
+  const timer=setTimeout(()=>{ cleanup(); console.log('[Player] native timeout → mpegts'); tryMpegts(); },500);
+
+  function cleanup(){ clearTimeout(timer); vid.removeEventListener('canplay',onCanPlay); vid.removeEventListener('error',onError); }
+  function tryMpegts(){
+    vid.src=''; vid.load();
+    if(typeof mpegts!=='undefined'&&mpegts.getFeatureList().mseLivePlayback) playWithMpegts(vid,url,vol);
+    else playWithHls(vid,url,vol);
+  }
+
+  vid.addEventListener('canplay',onCanPlay,{once:true});
+  vid.addEventListener('error',onError,{once:true});
+}
+
+function toggleMute(){const v=document.getElementById('player');v.muted=!v.muted;document.getElementById('mute-btn').textContent=v.muted?'🔇':'🔊';}
+function setVolume(val){document.getElementById('player').volume=+val;}
+
+// ── STOP ──
+function stopStream(){
+  stopStallDetection();
+  showReconnectIndicator(false);
+  stopCurrentStream();
+  currentStreamUrl='';
+  currentChId=null;
+  S.currentChannel=null;
+  clearInterval(epgTimer);
+  clearInterval(streamTimerInterval);
+  document.getElementById('player').style.display='none';
+  document.getElementById('player-placeholder').style.display='flex';
+  document.getElementById('now-playing-info').innerHTML='<div class="channel-name">—</div>';
+  document.getElementById('stop-btn').style.display='none';
+  document.getElementById('ext-btn').style.display='none';
+  document.getElementById('pause-btn').textContent='⏸';
+  document.getElementById('pause-btn').classList.remove('pause-active');
+  document.getElementById('stream-timer').style.display='none';
+  document.getElementById('epg-now-title').textContent='—';
+  document.getElementById('epg-progress').style.width='0%';
+  document.getElementById('epg-next').innerHTML='';
+  document.getElementById('epg-bar').classList.remove('expanded');
+  epgBarOpen=false;
+}
+
+// ── STREAM TIMER ──
+let streamTimerInterval=null;
+let streamStartTime=null;
+function startStreamTimer(){
+  clearInterval(streamTimerInterval);
+  streamStartTime=Date.now();
+  const el=document.getElementById('stream-timer');
+  el.style.display='inline';
+  streamTimerInterval=setInterval(()=>{
+    const s=Math.floor((Date.now()-streamStartTime)/1000);
+    const h=Math.floor(s/3600).toString().padStart(2,'0');
+    const m=Math.floor((s%3600)/60).toString().padStart(2,'0');
+    const sec=(s%60).toString().padStart(2,'0');
+    el.textContent=`▶ ${h}:${m}:${sec}`;
+  },1000);
+}
+
+// ── PAUSE / PLAY ──
+function togglePause(){
+  const vid=document.getElementById('player');
+  if(vid.style.display==='none') return;
+  const btn=document.getElementById('pause-btn');
+  if(vid.paused){
+    vid.play().catch(()=>{});
+    btn.textContent='⏸';
+    btn.classList.remove('pause-active');
+    btn.title='Pause (Space)';
+  } else {
+    vid.pause();
+    btn.textContent='▶';
+    btn.classList.add('pause-active');
+    btn.title='Play (Space)';
+  }
+}
+
+function showResumeChoice(){}
+function resumeFrom(goLive){
+  const div=document.getElementById('resume-toast');
+  if(div){clearTimeout(div._timer);div.remove();}
+}
+
+// Ενημέρωση κουμπιού όταν αλλάζει κατάσταση από αλλού
+window.addEventListener('DOMContentLoaded',()=>{
+  const vid=document.getElementById('player');
+  if(vid){
+    vid.addEventListener('play',()=>{
+      const btn=document.getElementById('pause-btn');
+      if(btn){btn.textContent='⏸';btn.classList.remove('pause-active');btn.title='Pause (Space)';}
+    });
+    vid.addEventListener('pause',()=>{
+      const btn=document.getElementById('pause-btn');
+      if(btn){btn.textContent='▶';btn.classList.add('pause-active');btn.title='Play (Space)';}
+    });
+  }
+  // Double-click για fullscreen
+  const pc=document.getElementById('player-container');
+  if(pc) pc.addEventListener('dblclick',()=>toggleFullscreen());
+});
+
+// ── EXTERNAL PLAYER ──
+let currentStreamUrl='';
+function openExtPlayer(){
+  if(!currentStreamUrl) return;
+  document.getElementById('ext-player-modal').classList.add('open');
+}
+function closeExtPlayer(){
+  document.getElementById('ext-player-modal').classList.remove('open');
+}
+function openMpvDirect(ch){
+  // Σταμάτα τον browser player αν παίζει
+  stopStallDetection();
+  showReconnectIndicator(false);
+  stopCurrentStream();
+  currentStreamUrl='';
+  S.currentChannel=ch.stream_id;
+  currentChId=ch.stream_id;
+  // Ενημέρωσε το active state στη λίστα
+  if(S.currentCat&&S.channels[S.currentCat]) renderChannels(S.channels[S.currentCat],document.querySelector('.ch-search-mini').value);
+  // Ενημέρωσε το now playing
+  document.getElementById('now-playing-info').innerHTML=`<div class="channel-name">▶ MPV: ${esc(ch.name)}</div>`;
+  // Φόρτωσε EPG χωρίς να παίξει το stream
+  epgData[ch.stream_id]=null;
+  loadEpg(ch.stream_id).then(()=>{
+    updateEpgBar();
+    if(S.currentCat&&S.channels[S.currentCat]) renderChannels(S.channels[S.currentCat],document.querySelector('.ch-search-mini').value);
+  });
+  clearInterval(epgTimer);
+  epgTimer=setInterval(updateEpgBar,30000);
+  const ext=ch.container_extension||'ts';
+  const url=`${S.server}/live/${enc(S.user)}/${enc(S.pass)}/${ch.stream_id}.${ext}`;
+  const mpvUrl='mpv://'+url;
+  const a=document.createElement('a');
+  a.href=mpvUrl;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  toast('▶ MPV: '+ch.name);
+}
+
+function closeMpv(){
+  const a=document.createElement('a');
+  a.href='mpv://close';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+function openMpv(){
+  if(!currentStreamUrl) return;
+  closeExtPlayer();
+  const mpvUrl='mpv://'+currentStreamUrl;
+  const a=document.createElement('a');
+  a.href=mpvUrl;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  toast('▶ Άνοιγμα στο MPV...');
+}
+function downloadM3u(){
+  // Σταμάτα το stream πρώτα
+  stopCurrentStream();
+  closeExtPlayer();
+  const chName = document.querySelector('#now-playing-info .channel-name')?.textContent || 'channel';
+  const m3u = `#EXTM3U\n#EXTINF:-1,${chName}\n${currentStreamUrl}\n`;
+  const blob = new Blob([m3u], {type:'application/x-mpegurl'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = chName.replace(/[^a-z0-9_\-]/gi,'_') + '.m3u';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+function stopCurrentStream(){
+  const vid = document.getElementById('player');
+  if(hlsInstance){try{hlsInstance.destroy();}catch(e){} hlsInstance=null;}
+  if(mpegtsPlayer){try{mpegtsPlayer.unload();mpegtsPlayer.detachMediaElement();mpegtsPlayer.destroy();}catch(e){} mpegtsPlayer=null;}
+  if(mpegtsTimer){clearTimeout(mpegtsTimer);mpegtsTimer=null;}
+  vid.pause();
+  vid.removeAttribute('src');
+  vid.load();
+  const btn=document.getElementById('pause-btn');
+  if(btn){btn.textContent='⏸';btn.classList.remove('pause-active');}
+}
+function copyStreamUrl(){
+  navigator.clipboard.writeText(currentStreamUrl).then(()=>{
+    toast('✅ URL αντιγράφηκε!');
+  }).catch(()=>{
+    // Fallback
+    const ta=document.createElement('textarea');
+    ta.value=currentStreamUrl;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    toast('✅ URL αντιγράφηκε!');
+  });
+  closeExtPlayer();
+}
+// Κλείσιμο modal με κλικ εκτός - μέσα σε DOMContentLoaded για ασφάλεια
+window.addEventListener('DOMContentLoaded',()=>{
+  const modal=document.getElementById('ext-player-modal');
+  if(modal) modal.addEventListener('click',e=>{ if(e.target===modal) closeExtPlayer(); });
+  const gsModal=document.getElementById('global-search-modal');
+  if(gsModal) gsModal.addEventListener('click',e=>{ if(e.target===gsModal) closeGlobalSearch(); });
+});
+function toggleFullscreen(){
+  const pc=document.getElementById('player-container');
+  if(!document.fullscreenElement) pc.requestFullscreen().catch(()=>{});
+  else document.exitFullscreen();
+}
+document.addEventListener('fullscreenchange',()=>{
+  const btn=document.getElementById('fs-btn');
+  if(document.fullscreenElement){
+    btn.innerHTML='✕';
+    btn.title='Έξοδος Fullscreen (F / Φ)';
+    btn.style.borderColor='var(--accent)';
+    btn.style.color='var(--accent)';
+  } else {
+    btn.innerHTML='⛶';
+    btn.title='Fullscreen (F / Φ)';
+    btn.style.borderColor='';
+    btn.style.color='';
+  }
+});
+document.addEventListener('keydown',e=>{
+  if(['INPUT','TEXTAREA'].includes(e.target.tagName)) return;
+  // Ctrl+F = global search
+  if((e.ctrlKey||e.metaKey)&&(e.key==='f'||e.key==='F'||e.code==='KeyF')){ e.preventDefault(); toggleGlobalSearch(); return; }
+  if(e.key==='Escape'){ closeGlobalSearch(); closeExtPlayer(); }
+  if(e.key==='f'||e.key==='F'||e.key==='φ'||e.key==='Φ'||e.code==='KeyF') toggleFullscreen();
+  if((e.key===' '||e.code==='Space')&&document.getElementById('player').style.display!=='none'){ e.preventDefault(); togglePause(); return; }
+  if(e.key==='s'||e.key==='S'||e.key==='σ'||e.key==='Σ'||e.code==='KeyS'){ if(document.getElementById('player').style.display!=='none') stopStream(); return; }
+  if(e.key==='m'||e.key==='M'||e.key==='μ'||e.key==='Μ'||e.code==='KeyM'){ toggleMute(); return; }
+  if(e.key==='i'||e.key==='I'||e.key==='ι'||e.key==='Ι'||e.code==='KeyI'){
+    const vid=document.getElementById('player');
+    if(vid.style.display!=='none') toggleInfoPanel();
+  }
+  // , = προηγούμενο κανάλι, . = επόμενο κανάλι
+  if(e.key===','||e.key==='<') { e.preventDefault(); navigateChannel(-1); return; }
+  if(e.key==='.'||e.key==='>') { e.preventDefault(); navigateChannel(1); return; }
+
+  // ── ΒΕΛΑΚΙΑ: πλοήγηση κατηγοριών & καναλιών ──
+  const isUp=e.key==='ArrowUp', isDown=e.key==='ArrowDown';
+  const isLeft=e.key==='ArrowLeft', isRight=e.key==='ArrowRight';
+  const isEnter=e.key==='Enter';
+  if(!isUp&&!isDown&&!isLeft&&!isRight&&!isEnter) return;
+  e.preventDefault();
+
+  if(isLeft){ kbFocus='cat'; highlightKbItem(); return; }
+  if(isRight){ kbFocus='ch'; highlightKbItem(); return; }
+
+  if(isUp||isDown){
+    if(kbFocus==='cat') moveKbCat(isDown?1:-1);
+    else moveKbCh(isDown?1:-1);
+  }
+  if(isEnter){
+    if(kbFocus==='cat') activateKbCat();
+    else activateKbCh();
+  }
+});
+
+// ── ΕΠΟΜΕΝΟ / ΠΡΟΗΓΟΥΜΕΝΟ ΚΑΝΑΛΙ ──
+function navigateChannel(dir){
+  if(!S.currentCat||!S.channels[S.currentCat]) return;
+  const list=S.channels[S.currentCat];
+  if(!list.length) return;
+  const idx=list.findIndex(c=>c.stream_id===S.currentChannel);
+  const newIdx=Math.max(0,Math.min(list.length-1,(idx<0?0:idx)+dir));
+  if(newIdx===idx) return;
+  playLive(list[newIdx]);
+}
+
+// ── CHANNEL OVERLAY ── (απενεργοποιημένο)
+function showChannelOverlay(ch){}
+
+// ── GLOBAL SEARCH ──
+let allChannelsCache=null;
+let gsSelectedIdx=-1; // index επιλεγμένου αποτελέσματος
+
+async function toggleGlobalSearch(){
+  const modal=document.getElementById('global-search-modal');
+  if(modal.style.display==='none'||!modal.style.display){
+    modal.style.display='flex';
+    setTimeout(()=>document.getElementById('global-search-input').focus(),50);
+    // Φόρτωσε όλα τα κανάλια αν δεν έχουν φορτωθεί
+    if(!allChannelsCache) await loadAllChannels();
+  } else {
+    closeGlobalSearch();
+  }
+}
+
+async function loadAllChannels(){
+  const res=document.getElementById('global-search-results');
+  res.innerHTML='<div style="padding:20px;text-align:center;color:var(--muted);font-size:13px;"><div class="spinner" style="margin:0 auto 10px"></div>Φόρτωση όλων των καναλιών...</div>';
+  try{
+    const data=await fetch(apiUrl('get_live_streams')).then(r=>r.json());
+    // Δημιούργησε map category_id → category_name
+    const catMap={};
+    S.categories.forEach(c=>catMap[c.category_id]=c.category_name);
+    allChannelsCache=data.map(ch=>({
+      ch,
+      catName: catMap[ch.category_id]||''
+    }));
+    res.innerHTML='<div style="padding:20px;text-align:center;color:var(--muted);font-size:13px;">Πληκτρολόγησε για αναζήτηση σε '+allChannelsCache.length+' κανάλια...</div>';
+  }catch(e){
+    res.innerHTML='<div style="padding:20px;text-align:center;color:var(--accent3);font-size:13px;">Σφάλμα φόρτωσης</div>';
+  }
+}
+function closeGlobalSearch(){
+  document.getElementById('global-search-modal').style.display='none';
+  document.getElementById('global-search-input').value='';
+  document.getElementById('global-search-results').innerHTML='<div style="padding:20px;text-align:center;color:var(--muted);font-size:13px;">Πληκτρολόγησε για αναζήτηση...</div>';
+  gsSelectedIdx=-1;
+}
+function globalSearch(query){
+  const res=document.getElementById('global-search-results');
+  if(!query||query.length<2){
+    const total=allChannelsCache?allChannelsCache.length:0;
+    res.innerHTML=`<div style="padding:20px;text-align:center;color:var(--muted);font-size:13px;">Πληκτρολόγησε τουλάχιστον 2 χαρακτήρες${total?'<br><small style="font-size:11px;">'+total+' κανάλια διαθέσιμα</small>':''}...</div>`;
+    return;
+  }
+  const q=query.toLowerCase();
+  const source=allChannelsCache||Object.keys(S.channels).flatMap(catId=>{
+    const cat=S.categories.find(c=>c.category_id===catId);
+    return S.channels[catId].map(ch=>({ch,catName:cat?cat.category_name:''}));
+  });
+  const results=source.filter(({ch})=>ch.name.toLowerCase().includes(q));
+  if(!results.length){
+    res.innerHTML='<div style="padding:20px;text-align:center;color:var(--muted);font-size:13px;">Δεν βρέθηκαν αποτελέσματα</div>';
+    return;
+  }
+  res.innerHTML=results.slice(0,80).map(({ch,catName})=>`
+    <div data-gs-item onclick='globalSearchPlay(${JSON.stringify(ch)})' style="padding:9px 12px;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:10px;margin-bottom:2px;border-left:2px solid transparent;" onmouseover="this.style.background='rgba(255,255,255,.05)'" onmouseout="this.style.background='none'">
+      <div style="width:32px;height:32px;border-radius:5px;background:var(--surface2);flex-shrink:0;display:flex;align-items:center;justify-content:center;overflow:hidden;border:1px solid var(--border);">
+        ${ch.stream_icon?`<img src="${esc(ch.stream_icon)}" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none'"/>`:'📺'}
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(ch.name)}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:1px;">${esc(catName)}</div>
+      </div>
+      <button onclick='event.stopPropagation();closeGlobalSearch();closeMpv();playLive(${JSON.stringify(ch)})' style="background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);border-radius:5px;color:var(--accent);font-size:10px;font-family:Rajdhani,sans-serif;font-weight:700;padding:3px 6px;cursor:pointer;flex-shrink:0;" onmouseover="this.style.background='rgba(0,212,255,.25)'" onmouseout="this.style.background='rgba(0,212,255,.08)'">▶WEB</button>
+    </div>`).join('')
+    +(results.length>80?`<div style="padding:10px;text-align:center;color:var(--muted);font-size:12px;">+${results.length-80} ακόμα — γράψε πιο συγκεκριμένα</div>`:'');
+}
+function globalSearchPlay(ch){
+  closeGlobalSearch();
+  const catId=Object.keys(S.channels).find(id=>S.channels[id].some(c=>c.stream_id===ch.stream_id));
+  if(catId){
+    const cat=S.categories.find(c=>c.category_id===catId);
+    if(cat) selectCategory(catId,cat.category_name);
+  }
+  setTimeout(()=>openMpvDirect(ch),300);
+}
+
+function gsHandleKey(e){
+  if(e.key==='Escape'){ e.preventDefault(); closeGlobalSearch(); return; }
+  const items=document.querySelectorAll('#global-search-results [data-gs-item]');
+  if(!items.length) return;
+  if(e.key==='ArrowDown'){
+    e.preventDefault();
+    gsSelectedIdx=Math.min(gsSelectedIdx+1, items.length-1);
+    gsHighlight(items);
+  } else if(e.key==='ArrowUp'){
+    e.preventDefault();
+    gsSelectedIdx=Math.max(gsSelectedIdx-1, 0);
+    gsHighlight(items);
+  } else if(e.key==='Enter' && gsSelectedIdx>=0){
+    e.preventDefault();
+    items[gsSelectedIdx]?.click();
+  }
+}
+
+function gsHighlight(items){
+  items.forEach((el,i)=>{
+    if(i===gsSelectedIdx){
+      el.style.background='rgba(0,212,255,.12)';
+      el.style.borderLeft='2px solid var(--accent)';
+      el.scrollIntoView({block:'nearest'});
+    } else {
+      el.style.background='none';
+      el.style.borderLeft='2px solid transparent';
+    }
+  });
+}
+
+// ── Keyboard navigation state ──
+let kbFocus='cat'; // 'cat' ή 'ch'
+let kbCatIdx=-1;
+let kbChIdx=-1;
+
+function getVisibleCatItems(){ return [...document.querySelectorAll('#categories-list .cat-item')]; }
+function getVisibleChItems(){ return [...document.querySelectorAll('#channels-list .channel-item')]; }
+
+function highlightKbItem(){
+  // Αφαίρεση kb-focus από όλα
+  document.querySelectorAll('.kb-focus').forEach(el=>el.classList.remove('kb-focus'));
+  if(kbFocus==='cat'){
+    const items=getVisibleCatItems();
+    if(kbCatIdx<0) kbCatIdx=0;
+    if(kbCatIdx>=items.length) kbCatIdx=items.length-1;
+    if(items[kbCatIdx]){ items[kbCatIdx].classList.add('kb-focus'); items[kbCatIdx].scrollIntoView({block:'nearest'}); }
+  } else {
+    const items=getVisibleChItems();
+    if(kbChIdx<0) kbChIdx=0;
+    if(kbChIdx>=items.length) kbChIdx=items.length-1;
+    if(items[kbChIdx]){ items[kbChIdx].classList.add('kb-focus'); items[kbChIdx].scrollIntoView({block:'nearest'}); }
+  }
+}
+
+function moveKbCat(dir){
+  const items=getVisibleCatItems();
+  if(!items.length) return;
+  if(kbCatIdx<0) kbCatIdx=0;
+  else kbCatIdx=Math.max(0,Math.min(items.length-1, kbCatIdx+dir));
+  highlightKbItem();
+}
+
+function moveKbCh(dir){
+  const items=getVisibleChItems();
+  if(!items.length){ kbFocus='cat'; highlightKbItem(); return; }
+  if(kbChIdx<0) kbChIdx=0;
+  else kbChIdx=Math.max(0,Math.min(items.length-1, kbChIdx+dir));
+  highlightKbItem();
+}
+
+function activateKbCat(){
+  const items=getVisibleCatItems();
+  if(items[kbCatIdx]){
+    items[kbCatIdx].click();
+    kbChIdx=0;
+    // Μετά την φόρτωση καναλιών, μεταφερόμαστε αυτόματα δεξιά
+    setTimeout(()=>{ kbFocus='ch'; highlightKbItem(); },300);
+  }
+}
+
+function activateKbCh(){
+  // Enter = MPV (κύρια ενέργεια) — ψάχνουμε στο αριστερό panel
+  const items=getVisibleChItems();
+  if(items[kbChIdx]){
+    const streamId=items[kbChIdx].dataset.streamId;
+    const leftItem=document.querySelector(`#epg-ch-panel-list [data-stream-id="${streamId}"]`);
+    if(leftItem) leftItem.click(); else items[kbChIdx].click();
+  }
+}
+
+
+
+
+// ── HELPERS ──
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+function hilightCat(listId,name){document.querySelectorAll('#'+listId+' .cat-item').forEach(el=>el.classList.toggle('active',el.querySelector('.cat-name')?.textContent.trim()===name.trim()));}
+
+
+
+// ── VIDEO INFO PANEL ──
+let infoPanelVisible=false;
+let infoInterval=null;
+let rvfcId=null;
+let fpsHistory=[];  // timestamps των τελευταίων frames
+let lastDropped={};
+
+function toggleInfoPanel(){
+  infoPanelVisible=!infoPanelVisible;
+  document.getElementById('video-info-panel').classList.toggle('visible',infoPanelVisible);
+  if(infoPanelVisible) startInfoUpdate(); else stopInfoUpdate();
+}
+
+function startInfoUpdate(){
+  stopInfoUpdate();
+  fpsHistory=[]; lastDropped={};
+  const vid=document.getElementById('player');
+
+  // requestVideoFrameCallback - callback per actual decoded video frame
+  if(vid.requestVideoFrameCallback){
+    function onFrame(now, meta){
+      fpsHistory.push(performance.now());
+      // Κράτα μόνο τα τελευταία 5 δευτερόλεπτα
+      const cutoff=performance.now()-5000;
+      fpsHistory=fpsHistory.filter(t=>t>cutoff);
+      if(infoPanelVisible) rvfcId=vid.requestVideoFrameCallback(onFrame);
+    }
+    rvfcId=vid.requestVideoFrameCallback(onFrame);
+  }
+
+  updateInfoPanel();
+  infoInterval=setInterval(updateInfoPanel,1000);
+}
+
+function stopInfoUpdate(){
+  clearInterval(infoInterval); infoInterval=null;
+  const vid=document.getElementById('player');
+  if(rvfcId&&vid.cancelVideoFrameCallback){ vid.cancelVideoFrameCallback(rvfcId); rvfcId=null; }
+  fpsHistory=[];
+}
+
+function updateInfoPanel(){
+  const vid=document.getElementById('player');
+  if(!vid||vid.style.display==='none') return;
+
+  // Ανάλυση
+  const w=vid.videoWidth, h=vid.videoHeight;
+  const resEl=document.getElementById('vi-res');
+  if(w&&h){
+    resEl.textContent=`${w}×${h}`;
+    resEl.className='vi-val '+(h>=1080?'good':h>=720?'warn':'bad');
+  } else resEl.textContent='—';
+
+  // FPS - από requestVideoFrameCallback αν υποστηρίζεται
+  const fpsEl=document.getElementById('vi-fps');
+  if(vid.requestVideoFrameCallback && fpsHistory.length>=2){
+    // Μέσος χρόνος μεταξύ frames στα τελευταία 2 δευτερόλεπτα
+    const span=fpsHistory[fpsHistory.length-1]-fpsHistory[0];
+    const fps=span>0?Math.round((fpsHistory.length-1)/(span/1000)):0;
+    fpsEl.textContent=fps>0?fps+' fps':'—';
+    fpsEl.className='vi-val '+(fps>=24?'good':fps>=15?'warn':'bad');
+  } else {
+    fpsEl.textContent='N/A';
+    fpsEl.className='vi-val';
+  }
+
+  // Codec
+  const codecEl=document.getElementById('vi-codec');
+  if(hlsInstance&&hlsInstance.levels&&hlsInstance.currentLevel>=0){
+    const lvl=hlsInstance.levels[hlsInstance.currentLevel];
+    codecEl.textContent=lvl?.videoCodec||lvl?.codecs||'HLS';
+  } else if(mpegtsPlayer){
+    codecEl.textContent='MPEG-TS';
+  } else codecEl.textContent='Native';
+
+  // Dropped frames ανά δευτερόλεπτο
+  const dropEl=document.getElementById('vi-dropped');
+  if(vid.getVideoPlaybackQuality){
+    const q=vid.getVideoPlaybackQuality();
+    const dropped=q.droppedVideoFrames||0;
+    const now=performance.now();
+    if(lastDropped._total!==undefined){
+      const diff=dropped-lastDropped._total;
+      const secs=(now-lastDropped._time)/1000;
+      const perSec=secs>0?Math.round(diff/secs):0;
+      dropEl.textContent=perSec+'/s'+(dropped>0?' ('+dropped+' σύνολο)':'');
+      dropEl.className='vi-val '+(perSec===0?'good':perSec<3?'warn':'bad');
+    }
+    lastDropped._total=dropped;
+    lastDropped._time=now;
+  } else dropEl.textContent='—';
+
+  // Buffer
+  const bufEl=document.getElementById('vi-buf');
+  try{
+    if(vid.buffered.length>0){
+      const buf=vid.buffered.end(vid.buffered.length-1)-vid.currentTime;
+      bufEl.textContent=buf.toFixed(1)+' s';
+      bufEl.className='vi-val '+(buf>5?'good':buf>2?'warn':'bad');
+    } else bufEl.textContent='0 s';
+  }catch{bufEl.textContent='—';}
+}
+
+// ── CONTEXT MENU (δεξί κλικ στο video) ──
+const ctxMenu=document.getElementById('vid-ctx-menu');
+
+document.addEventListener('contextmenu',e=>{
+  const vid=document.getElementById('player');
+  if(vid.style.display==='none') return;
+  const pc=document.getElementById('player-container');
+  if(!pc.contains(e.target)) return;
+  e.preventDefault();
+  e.stopPropagation();
+  // Σε fullscreen το menu πρέπει να μπει μέσα στο fullscreen element
+  const fsEl=document.fullscreenElement||document.body;
+  if(ctxMenu.parentElement!==fsEl) fsEl.appendChild(ctxMenu);
+  ctxMenu.style.display='block';
+  const x=Math.min(e.clientX, window.innerWidth-200);
+  const y=Math.min(e.clientY, window.innerHeight-130);
+  ctxMenu.style.left=x+'px'; ctxMenu.style.top=y+'px';
+},{capture:true});
+
+document.addEventListener('click',e=>{
+  if(ctxMenu && !ctxMenu.contains(e.target)) ctxMenu.style.display='none';
+});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape' && ctxMenu) ctxMenu.style.display='none';
+  if(e.key==='Escape') closeExtPlayer();
+  if(e.key==='Escape') closeSettings();
+  if(e.key==='Escape') closeEpgPopup();
+});
+
+let toastT;
+function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.style.display='block';clearTimeout(toastT);toastT=setTimeout(()=>el.style.display='none',2500);}
+
+// ── ΣΥΓΧΡΟΝΙΣΜΟΣ SCROLL μεταξύ αριστερής στήλης και EPG ──
+function syncEpgScroll(){
+  const area=document.getElementById('epg-scroll-area');
+  const chList=document.getElementById('epg-ch-panel-list');
+  if(!area||!chList) return;
+
+  // Sync: EPG → left panel
+  area.addEventListener('scroll',()=>{
+    chList.scrollTop=area.scrollTop;
+  },{passive:true});
+
+  // Sync: left panel → EPG (για scroll με ροδάκι πάνω στη στήλη)
+  chList.addEventListener('scroll',()=>{
+    area.scrollTop=chList.scrollTop;
+  },{passive:true});
+}
+
+// Ροδάκι ποντικιού πάνω στο EPG grid → οριζόντιο scroll
+document.addEventListener('wheel', e=>{
+  const panel=e.target.closest('.channel-panel');
+  if(!panel) return;
+  const area=document.getElementById('epg-scroll-area');
+  if(!area) return;
+
+  // Αν το target είναι στην αριστερή στήλη καναλιών → κατακόρυφο scroll (φυσιολογικό)
+  if(e.target.closest('.epg-ch-panel')) return;
+
+  // Παντού αλλού στο grid: μετατρέπουμε το κατακόρυφο ροδάκι σε οριζόντιο scroll
+  e.preventDefault();
+  area.scrollLeft += (e.deltaY || e.deltaX);
+},{passive:false});
+
+// ── SETTINGS ──
+function openSettings(){
+  const saved=JSON.parse(localStorage.getItem('ns_creds')||'null');
+  if(saved){
+    document.getElementById('settings-server').value=saved.server||'';
+    document.getElementById('settings-user').value=saved.user||'';
+    document.getElementById('settings-pass').value=saved.pass||'';
+  }
+  document.getElementById('settings-modal').classList.add('open');
+}
+function closeSettings(){
+  document.getElementById('settings-modal').classList.remove('open');
+}
+function saveSettings(){
+  const server=document.getElementById('settings-server').value.trim().replace(/\/$/,'');
+  const user=document.getElementById('settings-user').value.trim();
+  const pass=document.getElementById('settings-pass').value.trim();
+  if(!server||!user||!pass){toast('Συμπλήρωσε όλα τα πεδία!');return;}
+  saveCreds(server,user,pass);
+  S.server=server; S.user=user; S.pass=pass;
+  closeSettings();
+  toast('✅ Αποθηκεύτηκε! Γίνεται επανασύνδεση...');
+  setTimeout(()=>{ logout(); },1000);
+}
+
+document.getElementById('password').addEventListener('keydown',e=>{if(e.key==='Enter')connect();});
+document.getElementById('username').addEventListener('keydown',e=>{if(e.key==='Enter')connect();});
+
+// Αυτόματη σύνδεση αν υπάρχουν αποθηκευμένα στοιχεία
+window.addEventListener('DOMContentLoaded',()=>{
+  // Log codec support για debugging
+  console.log('[Codec Support]',{
+    'avc1.640029': MediaSource.isTypeSupported('video/mp4;codecs=avc1.640029'),
+    'avc1.4d0029': MediaSource.isTypeSupported('video/mp4;codecs=avc1.4d0029'),
+    'avc1.42E01E': MediaSource.isTypeSupported('video/mp4;codecs=avc1.42E01E'),
+    'hvc1':        MediaSource.isTypeSupported('video/mp4;codecs=hvc1.1.6.L93.B0'),
+    'ts native':   document.createElement('video').canPlayType('video/mp2t'),
+  });
+  loadSavedCreds();
+  const saved=JSON.parse(localStorage.getItem('ns_creds')||'null');
+  if(saved&&saved.server&&saved.user&&saved.pass){ setTimeout(connect,400); }
+
+  // Ανανέωσε τη γραμμή ωρών κάθε λεπτό (ώστε η NOW γραμμή να κινείται)
+  setInterval(()=>{
+    if(currentChannelList.length) renderTimeRuler();
+  }, 60000);
+});
+</script>
+
+<!-- GLOBAL SEARCH MODAL -->
+<div id="global-search-modal" style="display:none;position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.75);align-items:flex-start;justify-content:center;padding-top:80px;backdrop-filter:blur(4px);">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;width:520px;max-width:95vw;max-height:70vh;display:flex;flex-direction:column;position:relative;">
+    <div style="position:absolute;top:0;left:0;right:0;height:2px;border-radius:14px 14px 0 0;background:linear-gradient(90deg,var(--accent2),var(--accent));"></div>
+    <div style="padding:16px 18px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);">
+      <span style="font-size:16px;">🔍</span>
+      <input id="global-search-input" type="text" placeholder="Αναζήτηση σε όλα τα κανάλια..." oninput="globalSearch(this.value);gsSelectedIdx=-1;"
+        onkeydown="gsHandleKey(event)"
+        style="flex:1;background:none;border:none;outline:none;color:var(--text);font-family:Rajdhani,sans-serif;font-size:15px;"/>
+      <button onclick="closeGlobalSearch()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:2px 6px;">✕</button>
+    </div>
+    <div id="global-search-results" style="overflow-y:auto;flex:1;padding:8px;">
+      <div style="padding:20px;text-align:center;color:var(--muted);font-size:13px;">Πληκτρολόγησε για αναζήτηση...</div>
+    </div>
+  </div>
+</div>
+
+<!-- EXTERNAL PLAYER MODAL -->
+<div id="ext-player-modal">
+  <div class="ext-modal-box">
+    <button class="ext-modal-close" onclick="closeExtPlayer()">✕</button>
+    <div class="ext-modal-title">📡 ΕΞΩΤΕΡΙΚΟΣ PLAYER</div>
+    <div class="ext-modal-sub">Το κανάλι δεν παίζει στον internal player;<br>Άνοιγμα σε εξωτερικό player:</div>
+    <button class="ext-btn" onclick="openMpv()">
+      <span class="ext-icon">▶</span>
+      <span class="ext-info">Άνοιγμα στο MPV<small>Ανοίγει το stream στο MPV player</small></span>
+    </button>
+    <button class="ext-btn" onclick="downloadM3u()">
+      <span class="ext-icon">💾</span>
+      <span class="ext-info">Κατέβασε ως .m3u<small>Άνοιξέ το χειροκίνητα σε MPV ή άλλο player</small></span>
+    </button>
+    <button class="ext-btn" onclick="copyStreamUrl()">
+      <span class="ext-icon">📋</span>
+      <span class="ext-info">Αντιγραφή Stream URL<small>Επικόλλησε σε οποιονδήποτε player</small></span>
+    </button>
+  </div>
+</div>
+
+<!-- CONTEXT MENU -->
+<div id="vid-ctx-menu">
+  <button onclick="toggleInfoPanel()">📊 Πληροφορίες βίντεο</button>
+  <hr class="ctx-sep">
+  <button onclick="togglePause()">⏸ Pause / Play (Space)</button>
+  <button onclick="toggleMute()">🔊 Σίγαση / Ήχος</button>
+  <button onclick="toggleFullscreen()">⛶ Fullscreen (F)</button>
+  <hr class="ctx-sep">
+  <button onclick="openExtPlayer()">📡 Εξωτερικός Player</button>
+</div>
+<!-- EPG DETAIL POPUP -->
+<div id="epg-popup">
+  <button class="epg-popup-close" onclick="closeEpgPopup()">✕</button>
+  <div class="epg-popup-ch" id="epg-popup-ch"></div>
+  <div id="epg-popup-badge"></div>
+  <div class="epg-popup-title" id="epg-popup-title"></div>
+  <div class="epg-popup-time" id="epg-popup-time"></div>
+  <div class="epg-popup-dur" id="epg-popup-dur"></div>
+  <div id="epg-popup-desc-wrap"></div>
+</div>
+
+</body>
+</html>

@@ -90,7 +90,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 
 /* LEFT PANEL — fixed channel names, scrolls only vertically */
 .epg-ch-panel{width:200px;flex-shrink:0;display:flex;flex-direction:column;border-right:1px solid var(--border);overflow:hidden;}
-.epg-ch-panel-header{height:29px;flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--border);padding:6px 10px;font-size:10px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;display:flex;align-items:center;}
+.epg-ch-panel-header{height:45px;flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--border);padding:6px 10px;font-size:10px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;display:flex;align-items:center;}
 .epg-ch-panel-list{flex:1;overflow-y:scroll;overflow-x:hidden;}
 .epg-ch-panel-list::-webkit-scrollbar{width:0px;}
 
@@ -126,7 +126,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .epg-day-banner.day-other{color:var(--accent3);background:rgba(255,62,108,.04);border-bottom:1px solid rgba(255,62,108,.15);opacity:.7;}
 
 /* ── CHANNEL ROWS ── */
-.channel-item{display:flex;align-items:stretch;border-bottom:1px solid rgba(255,255,255,.04);cursor:default;transition:background .1s;min-height:50px;position:relative;}
+.channel-item{display:flex;align-items:stretch;border-bottom:1px solid rgba(255,255,255,.04);cursor:default;transition:background .1s;height:50px;position:relative;}
 .ch-left:hover{background:rgba(255,255,255,.05);}
 .ch-left:hover .ch-name{color:var(--accent);}
 .ch-left.active-ch{background:rgba(0,212,255,.1);border-left:2px solid var(--accent);}
@@ -135,7 +135,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .kb-focus{outline:2px solid var(--accent);outline-offset:-2px;}
 
 /* Left: logo + name — now lives in fixed left panel, not in row */
-.ch-left{width:200px;flex-shrink:0;padding:6px 10px;display:flex;align-items:center;gap:8px;border-right:none;cursor:pointer;background:var(--surface2);transition:background .1s;min-height:50px;border-bottom:1px solid rgba(255,255,255,.04);}
+.ch-left{width:200px;flex-shrink:0;padding:6px 10px;display:flex;align-items:center;gap:8px;border-right:none;cursor:pointer;background:var(--surface2);transition:background .1s;height:50px;border-bottom:1px solid rgba(255,255,255,.04);}
 /* Right-panel EPG row (no ch-left inside) */
 .channel-item:hover .ch-left{background:rgba(255,255,255,.02);}
 .channel-item.active .ch-left{background:rgba(0,212,255,.06);border-left:2px solid var(--accent);}
@@ -145,7 +145,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .ch-name{font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text);transition:color .15s;flex:1;}
 
 /* Right: EPG grid row — time-positioned slots */
-.ch-epg-row{flex:1;position:relative;min-height:50px;overflow:hidden;}
+.ch-epg-row{flex:1;position:relative;overflow:hidden;}
 
 /* EPG slots — absolutely positioned by time */
 .ch-epg-slot{position:absolute;top:4px;bottom:4px;border-radius:5px;padding:3px 7px;cursor:pointer;display:flex;flex-direction:column;justify-content:center;transition:background .15s;border:1px solid transparent;box-sizing:border-box;overflow:hidden;}
@@ -1954,19 +1954,25 @@ let toastT;
 function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.style.display='block';clearTimeout(toastT);toastT=setTimeout(()=>el.style.display='none',2500);}
 
 // ── ΣΥΓΧΡΟΝΙΣΜΟΣ SCROLL μεταξύ αριστερής στήλης και EPG ──
+let _epgSyncReady=false;
 function syncEpgScroll(){
+  if(_epgSyncReady) return; // Μόνο μία φορά
   const area=document.getElementById('epg-scroll-area');
   const chList=document.getElementById('epg-ch-panel-list');
   if(!area||!chList) return;
-
-  // Sync: EPG → left panel
+  _epgSyncReady=true;
+  let _syncing=false;
   area.addEventListener('scroll',()=>{
+    if(_syncing) return;
+    _syncing=true;
     chList.scrollTop=area.scrollTop;
+    _syncing=false;
   },{passive:true});
-
-  // Sync: left panel → EPG (για scroll με ροδάκι πάνω στη στήλη)
   chList.addEventListener('scroll',()=>{
+    if(_syncing) return;
+    _syncing=true;
     area.scrollTop=chList.scrollTop;
+    _syncing=false;
   },{passive:true});
 }
 

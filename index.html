@@ -1755,7 +1755,7 @@ let kbCatIdx=-1;
 let kbChIdx=-1;
 
 function getVisibleCatItems(){ return [...document.querySelectorAll('#categories-list .cat-item')]; }
-function getVisibleChItems(){ return [...document.querySelectorAll('#channels-list .channel-item')]; }
+function getVisibleChItems(){ return [...document.querySelectorAll('#epg-ch-panel-list [data-stream-id]')]; }
 
 function highlightKbItem(){
   // Αφαίρεση kb-focus από όλα
@@ -1800,13 +1800,9 @@ function activateKbCat(){
 }
 
 function activateKbCh(){
-  // Enter = MPV (κύρια ενέργεια) — ψάχνουμε στο αριστερό panel
+  // Enter = MPV (κύρια ενέργεια) — κλικ στο αριστερό panel
   const items=getVisibleChItems();
-  if(items[kbChIdx]){
-    const streamId=items[kbChIdx].dataset.streamId;
-    const leftItem=document.querySelector(`#epg-ch-panel-list [data-stream-id="${streamId}"]`);
-    if(leftItem) leftItem.click(); else items[kbChIdx].click();
-  }
+  if(items[kbChIdx]) items[kbChIdx].click();
 }
 
 

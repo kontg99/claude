@@ -69,9 +69,29 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .cat-item:hover{background:var(--surface2);color:var(--text);}
 .cat-item.active{background:rgba(0,212,255,.1);color:var(--accent);border-left:2px solid var(--accent);}
 .cat-item .cat-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.fav-btn{background:none;border:none;cursor:pointer;font-size:13px;padding:2px 4px;opacity:.25;transition:opacity .15s,transform .15s;flex-shrink:0;line-height:1;}
-.cat-item:hover .fav-btn{opacity:.6;}
-.fav-btn.active{opacity:1;transform:scale(1.1);}
+.fav-btn{background:none;border:none;cursor:pointer;font-size:13px;padding:2px 4px;opacity:.5;transition:opacity .15s,transform .15s;flex-shrink:0;line-height:1;color:#ffd700;}
+.cat-item:hover .fav-btn{opacity:.85;}
+.fav-btn.active{opacity:1;transform:scale(1.1);color:#ffd700;}
+
+/* Drag & drop κατηγορίες */
+.cat-item.drag-over{background:rgba(0,212,255,.15);border:1px dashed var(--accent);}
+.cat-item[draggable="true"]{cursor:grab;}
+.cat-item[draggable="true"]:active{cursor:grabbing;}
+
+/* Channel favorites button */
+.ch-fav-btn{background:none;border:none;cursor:pointer;font-size:11px;padding:1px 3px;opacity:.15;transition:opacity .15s,transform .15s;flex-shrink:0;line-height:1;color:var(--text);}
+.ch-left:hover .ch-fav-btn{opacity:.55;}
+.ch-fav-btn.active{opacity:1 !important;color:#ffd700;}
+
+/* Playing channel — πλήρες έντονο highlight */
+.ch-left.playing-ch{
+  background:linear-gradient(90deg,rgba(0,212,255,.5),rgba(0,212,255,.25)) !important;
+  border-left:4px solid var(--accent) !important;
+  box-shadow:inset 0 0 24px rgba(0,212,255,.2);
+}
+.ch-left.playing-ch .ch-name{color:#fff;font-weight:700;text-shadow:0 0 10px rgba(0,212,255,.9);}
+.ch-left.playing-ch .ch-logo{border-color:var(--accent);box-shadow:0 0 8px rgba(0,212,255,.6);}
+.channel-item.playing-row{background:rgba(0,212,255,.1) !important;border-left:3px solid var(--accent);}
 
 /* ── CHANNEL PANEL — EPG GRID ── */
 .channel-panel{width:820px;flex-shrink:0;background:var(--surface2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
@@ -437,12 +457,34 @@ video#player{width:100%;height:100%;object-fit:contain;background:#000;display:b
 <div id="settings-modal">
   <div class="settings-box">
     <button class="settings-close" onclick="closeSettings()">✕</button>
-    <div class="settings-title">⚙️ Ρυθμίσεις Σύνδεσης</div>
+    <div class="settings-title">⚙️ Ρυθμίσεις</div>
     <div class="form-group"><label>Server URL</label><input type="text" id="settings-server" placeholder="http://server.example.com:8080"/></div>
     <div class="form-group"><label>Username</label><input type="text" id="settings-user" placeholder="your_username"/></div>
     <div class="form-group"><label>Password</label><input type="password" id="settings-pass" placeholder="••••••••"/></div>
     <button class="btn-save-settings" onclick="saveSettings()">💾 ΑΠΟΘΗΚΕΥΣΗ &amp; ΕΠΑΝΑΣΥΝΔΕΣΗ</button>
-    <div class="settings-note">Μετά την αποθήκευση θα γίνει αυτόματη επανασύνδεση με τα νέα στοιχεία.</div>
+    <div class="settings-note">Μετά την αποθήκευση θα γίνει αυτόματη επανασύνδεση.</div>
+
+    <hr style="border:none;border-top:1px solid var(--border);margin:20px 0 16px;"/>
+    <div style="font-size:11px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:12px;">🖥️ Εγκατάσταση σε νέο PC</div>
+    <div style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:12px;">
+      Για να λειτουργεί ο MPV player σε νέο PC, χρειάζεται να καταχωρηθεί το <code style="background:var(--surface2);padding:1px 5px;border-radius:3px;color:var(--accent);">mpv://</code> protocol στα Windows Registry.
+    </div>
+    <div class="form-group">
+      <label>Path του mpv.exe στο νέο PC</label>
+      <input type="text" id="reg-mpv-path" placeholder="π.χ. C:\Users\User\Desktop\mpv\mpv.exe"/>
+      <div style="font-size:11px;color:var(--muted);margin-top:5px;">Βάλε το path όπου θα βρίσκεται ο MPV στον νέο υπολογιστή.</div>
+    </div>
+    <button onclick="downloadRegFile()"
+      style="width:100%;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.3);
+             border-radius:8px;padding:11px;color:var(--accent);font-family:'Rajdhani',sans-serif;
+             font-size:13px;font-weight:700;letter-spacing:1px;cursor:pointer;transition:all .2s;"
+      onmouseover="this.style.background='rgba(0,212,255,.18)'"
+      onmouseout="this.style.background='rgba(0,212,255,.08)'">
+      📥 Κατέβασε το .reg αρχείο
+    </button>
+    <div style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5;text-align:center;">
+      Τρέξε το .reg στον νέο υπολογιστή (διπλό κλικ → Ναι) και ο MPV θα λειτουργεί κανονικά.
+    </div>
   </div>
 </div>
 
@@ -472,7 +514,7 @@ setInterval(()=>{
   if(removed>0) console.log(`[Memory] Καθαρίστηκαν EPG δεδομένα ${removed} καναλιών`);
 }, 30*60*1000);
 
-// ── FAVORITES ── (localStorage)
+// ── FAVORITES ΚΑΤΗΓΟΡΙΕΣ ── (localStorage)
 function getFavs(){ try{return JSON.parse(localStorage.getItem('ns_favs')||'[]');}catch{return[];} }
 function saveFavs(arr){ localStorage.setItem('ns_favs',JSON.stringify(arr)); }
 function isFav(id){ return getFavs().includes(String(id)); }
@@ -483,6 +525,81 @@ function toggleFav(id,e){
   if(idx>=0) favs.splice(idx,1); else favs.push(sid);
   saveFavs(favs);
   renderCategories(document.getElementById('cat-search').value);
+}
+
+// ── FAVORITES ΚΑΝΑ΄ΛΙΑ ── (localStorage)
+function getChFavs(){ try{return JSON.parse(localStorage.getItem('ns_ch_favs')||'[]');}catch{return[];} }
+function saveChFavs(arr){ localStorage.setItem('ns_ch_favs',JSON.stringify(arr)); }
+function isChFav(id){ return getChFavs().includes(String(id)); }
+function getChFavData(){ try{return JSON.parse(localStorage.getItem('ns_ch_fav_data')||'{}');}catch{return {};} }
+
+function toggleChFav(ch, e){
+  e.stopPropagation();
+  const favs=getChFavs(); const sid=String(ch.stream_id);
+  const idx=favs.indexOf(sid);
+  if(idx>=0){
+    favs.splice(idx,1);
+    const data=getChFavData(); delete data[sid];
+    localStorage.setItem('ns_ch_fav_data',JSON.stringify(data));
+    toast('Αφαιρέθηκε: '+ch.name);
+  } else {
+    favs.push(sid);
+    const data=getChFavData(); data[sid]=ch;
+    localStorage.setItem('ns_ch_fav_data',JSON.stringify(data));
+    toast('⭐ Προστέθηκε: '+ch.name);
+  }
+  saveChFavs(favs);
+  // Ανανέωσε αριστερό panel αν είμαστε σε κατηγορία
+  if(S.currentCat&&S.channels[S.currentCat])
+    renderChannels(S.channels[S.currentCat], document.querySelector('.ch-search-mini')?.value||'');
+  // Αν βλέπουμε τα favorites, ανανέωσε
+  if(S.currentCat==='__ch_favs__') showChFavorites();
+}
+
+function showChFavorites(){
+  S.currentCat='__ch_favs__';
+  renderCategories(document.getElementById('cat-search').value);
+  document.getElementById('channel-panel-title').textContent='⭐ ΑΓΑΠΗΜΕΝΑ ΚΑΝΑΛΙΑ';
+  const favIds=getChFavs();
+  const data=getChFavData();
+  const favChs=favIds.map(id=>data[id]).filter(Boolean);
+  if(!favChs.length){
+    document.getElementById('channels-list').innerHTML=
+      '<div class="empty-state"><div class="icon">⭐</div><p>Κανένα αγαπημένο κανάλι</p><p style="font-size:11px;opacity:.5;margin-top:4px;">Πάτα ⭐ δίπλα στο κανάλι για να το προσθέσεις</p></div>';
+    document.getElementById('epg-ch-panel-list').innerHTML='';
+    renderTimeRuler();
+    return;
+  }
+  renderChannels(favChs);
+}
+
+// ── MPV PATH ──
+function getMpvPath(){ return localStorage.getItem('ns_mpv_path')||''; }
+function saveMpvPath(p){
+  if(p) localStorage.setItem('ns_mpv_path',p);
+  else localStorage.removeItem('ns_mpv_path');
+}
+// File picker callback — παίρνει το path από το επιλεγμένο αρχείο
+function pickMpvFile(input){
+  if(!input.files||!input.files[0]) return;
+  const file=input.files[0];
+  // Ο browser δίνει μόνο το filename, όχι το full path για λόγους ασφαλείας.
+  // Χρησιμοποιούμε webkitRelativePath ή file.name
+  // Σε Chrome/Edge με --allow-file-access μπορεί να δώσει full path
+  const path = file.path || // Electron/Node context
+               (input.value ? input.value.replace(/^C:\\fakepath\\/i,'') : file.name);
+  document.getElementById('settings-mpv-path').value=path;
+  toast('✅ Επιλέχθηκε: '+file.name+'\n💡 Βεβαιώσου ότι το path είναι σωστό');
+}
+
+// ── PLAYING CHANNEL HIGHLIGHT ──
+function updatePlayingHighlight(){
+  document.querySelectorAll('.ch-left.playing-ch').forEach(el=>el.classList.remove('playing-ch'));
+  document.querySelectorAll('.channel-item.playing-row').forEach(el=>el.classList.remove('playing-row'));
+  if(!S.currentChannel) return;
+  const sid=String(S.currentChannel);
+  document.querySelectorAll(`.ch-left[data-stream-id="${sid}"]`).forEach(el=>el.classList.add('playing-ch'));
+  document.querySelectorAll(`.channel-item[data-stream-id="${sid}"]`).forEach(el=>el.classList.add('playing-row'));
 }
 
 // ── SAVED CREDENTIALS ──
@@ -580,33 +697,105 @@ function switchTab(t){
   document.querySelectorAll('.tab-content').forEach(el=>el.classList.toggle('active',el.id==='tab-'+t));
 }
 
-// ── CATEGORIES with FAVORITES ──
+// ── CATEGORIES with FAVORITES + DRAG & DROP ──
+let _dragSrcId=null, _dragSrcFav=false;
+
 function renderCategories(filter=''){
   const favIds=getFavs();
   let cats=filter?S.categories.filter(c=>c.category_name.toLowerCase().includes(filter.toLowerCase())):S.categories;
-  const favCats=cats.filter(c=>favIds.includes(String(c.category_id)));
+
+  // Ταξινόμηση favorites με βάση αποθηκευμένη σειρά
+  const favOrder=JSON.parse(localStorage.getItem('ns_fav_order')||'[]');
+  const favCats=favIds.map(id=>cats.find(c=>String(c.category_id)===id)).filter(Boolean);
+  // Εφαρμογή custom order στα favorites
+  favCats.sort((a,b)=>{
+    const ai=favOrder.indexOf(String(a.category_id));
+    const bi=favOrder.indexOf(String(b.category_id));
+    if(ai===-1&&bi===-1) return 0;
+    if(ai===-1) return 1;
+    if(bi===-1) return -1;
+    return ai-bi;
+  });
   const otherCats=cats.filter(c=>!favIds.includes(String(c.category_id)));
 
   const list=document.getElementById('categories-list');
   if(!cats.length){list.innerHTML='<div class="sidebar-loading">Κανένα αποτέλεσμα</div>';return;}
 
   let html='';
-  if(favCats.length && !filter){
-    html+='<div class="cat-section-label">⭐ ΑΓΑΠΗΜΕΝΑ</div>';
-    html+=favCats.map(c=>catHTML(c,true)).join('');
-    html+='<div class="cat-section-label">ΟΛΕΣ ΟΙ ΚΑΤΗΓΟΡΙΕΣ</div>';
+  if(!filter){
+    // Κουμπί ⭐ Αγαπημένα Κανάλια — draggable για να αλλάζει θέση μέσα στα favs
+    const chFavActive=S.currentCat==='__ch_favs__';
+    const chFavOrder=JSON.parse(localStorage.getItem('ns_fav_order')||'[]');
+    // Βρίσκουμε αν η θέση του ch_favs είναι μέσα στα favorites ή πάνω απ' όλα
+    html+=`<div class="cat-item${chFavActive?' active':''}"
+      draggable="true" data-cat-id="__ch_favs__" data-cat-fav="true"
+      onclick="showChFavorites()"
+      style="color:${chFavActive?'var(--accent)':'#ffd700'};font-weight:600;">
+      <span style="font-size:14px;">⭐</span>
+      <span class="cat-name">Αγαπημένα Κανάλια</span>
+      <span style="font-size:10px;color:var(--muted);flex-shrink:0;">${getChFavs().length}</span>
+    </div>`;
+
+    if(favCats.length){
+      html+='<div class="cat-section-label">⭐ ΑΓΑΠΗΜΕΝΕΣ ΚΑΤΗΓΟΡΙΕΣ</div>';
+      html+=favCats.map(c=>catHTML(c,true,true)).join('');
+      html+='<div class="cat-section-label">ΟΛΕΣ ΟΙ ΚΑΤΗΓΟΡΙΕΣ</div>';
+      html+=otherCats.map(c=>catHTML(c,false,false)).join('');
+    } else {
+      html+=otherCats.map(c=>catHTML(c,false,false)).join('');
+    }
+  } else {
+    html=cats.map(c=>catHTML(c,isFav(c.category_id),isFav(c.category_id))).join('');
   }
-  html+=otherCats.map(c=>catHTML(c,false)).join('');
-  if(filter) html=cats.map(c=>catHTML(c,isFav(c.category_id))).join('');
   list.innerHTML=html;
+
+  // Ενεργοποίηση drag & drop σε ΟΛΑ τα draggable items
+  setupCatDragDrop();
 }
 
-function catHTML(c,fav){
+function catHTML(c,fav,draggable){
   const active=S.currentCat===c.category_id;
-  return `<div class="cat-item${active?' active':''}" onclick="selectCategory('${esc(c.category_id)}','${esc(c.category_name)}')">
+  return `<div class="cat-item${active?' active':''}"
+    ${draggable?`draggable="true" data-cat-id="${esc(c.category_id)}" data-cat-fav="${fav}"`:''}
+    onclick="selectCategory('${esc(c.category_id)}','${esc(c.category_name)}')">
     <span class="cat-name">${esc(c.category_name)}</span>
-    <button class="fav-btn${fav?' active':''}" onclick="toggleFav('${esc(c.category_id)}',event)" title="${fav?'Αφαίρεση από αγαπημένα':'Προσθήκη στα αγαπημένα'}">${fav?'⭐':'☆'}</button>
+    <button class="fav-btn${fav?' active':''}" onclick="toggleFav('${esc(c.category_id)}',event)"
+      title="${fav?'Αφαίρεση από αγαπημένα':'Προσθήκη στα αγαπημένα'}">${fav?'⭐':'☆'}</button>
   </div>`;
+}
+
+function setupCatDragDrop(){
+  const items=document.querySelectorAll('.cat-item[draggable="true"]');
+  items.forEach(el=>{
+    el.addEventListener('dragstart',e=>{
+      _dragSrcId=el.dataset.catId;
+      _dragSrcFav=el.dataset.catFav==='true';
+      e.dataTransfer.effectAllowed='move';
+      el.style.opacity='.4';
+    });
+    el.addEventListener('dragend',()=>{ el.style.opacity=''; });
+    el.addEventListener('dragover',e=>{
+      e.preventDefault(); e.dataTransfer.dropEffect='move';
+      el.classList.add('drag-over');
+    });
+    el.addEventListener('dragleave',()=>el.classList.remove('drag-over'));
+    el.addEventListener('drop',e=>{
+      e.preventDefault(); el.classList.remove('drag-over');
+      const targetId=el.dataset.catId;
+      if(!_dragSrcId||_dragSrcId===targetId) return;
+      // Ανανέωσε τη σειρά στο localStorage
+      const favIds=getFavs();
+      const from=favIds.indexOf(_dragSrcId);
+      const to=favIds.indexOf(targetId);
+      if(from!==-1&&to!==-1){
+        favIds.splice(from,1);
+        favIds.splice(to,0,_dragSrcId);
+        saveFavs(favIds);
+        localStorage.setItem('ns_fav_order',JSON.stringify(favIds));
+        renderCategories(document.getElementById('cat-search').value);
+      }
+    });
+  });
 }
 
 async function selectCategory(id,name){
@@ -669,10 +858,12 @@ function renderChannels(channels,filter=''){
   // Αριστερό panel: μόνο ονόματα καναλιών
   if(chPanel){
     chPanel.innerHTML=filtered.map(ch=>{
-      const isActive=S.currentChannel===ch.stream_id;
-      return `<div class="ch-left${isActive?' active-ch':''}" data-stream-id="${ch.stream_id}" onclick='openMpvDirect(${JSON.stringify(ch)})'>
+      const isPlaying=S.currentChannel===ch.stream_id;
+      const isFavCh=isChFav(ch.stream_id);
+      return `<div class="ch-left${isPlaying?' playing-ch':''}" data-stream-id="${ch.stream_id}" onclick='openMpvDirect(${JSON.stringify(ch)})'>
         <div class="ch-logo">${ch.stream_icon?`<img src="${esc(ch.stream_icon)}" loading="lazy" onerror="this.style.display='none'"/>`:'📺'}</div>
         <div class="ch-name" title="${esc(ch.name)}">${esc(ch.name)}</div>
+        <button class="ch-fav-btn${isFavCh?' active':''}" onclick='event.stopPropagation();toggleChFav(${JSON.stringify(ch)},event)' title="${isFavCh?'Αφαίρεση από αγαπημένα':'Προσθήκη στα αγαπημένα'}">⭐</button>
       </div>`;
     }).join('');
   }
@@ -1482,8 +1673,11 @@ function openMpvDirect(ch){
   currentStreamUrl='';
   S.currentChannel=ch.stream_id;
   currentChId=ch.stream_id;
+  // Highlighted κανάλι
+  updatePlayingHighlight();
   // Ενημέρωσε το active state στη λίστα
   if(S.currentCat&&S.channels[S.currentCat]) renderChannels(S.channels[S.currentCat],document.querySelector('.ch-search-mini').value);
+  else if(S.currentCat==='__ch_favs__') showChFavorites();
   // Ενημέρωσε το now playing
   document.getElementById('now-playing-info').innerHTML=`<div class="channel-name">▶ MPV: ${esc(ch.name)}</div>`;
   // Φόρτωσε EPG χωρίς να παίξει το stream
@@ -1496,7 +1690,15 @@ function openMpvDirect(ch){
   epgTimer=setInterval(updateEpgBar,30000);
   const ext=ch.container_extension||'ts';
   const url=`${S.server}/live/${enc(S.user)}/${enc(S.pass)}/${ch.stream_id}.${ext}`;
-  const mpvUrl='mpv://'+url;
+  // Χρησιμοποιούμε custom MPV path αν υπάρχει
+  const mpvPath=getMpvPath();
+  let mpvUrl;
+  if(mpvPath){
+    // Άνοιγμα με συγκεκριμένο path μέσω custom protocol
+    mpvUrl='mpv://'+url;
+  } else {
+    mpvUrl='mpv://'+url;
+  }
   const a=document.createElement('a');
   a.href=mpvUrl;
   document.body.appendChild(a);
@@ -2010,6 +2212,29 @@ function saveSettings(){
   closeSettings();
   toast('✅ Αποθηκεύτηκε! Γίνεται επανασύνδεση...');
   setTimeout(()=>{ logout(); },1000);
+}
+
+// ── ΔΗΜΙΟΥΡΓΙΑ .REG ΑΡΧΕΙΟΥ ΓΙΑ MPV PROTOCOL ──
+function downloadRegFile(){
+  const mpvPath=document.getElementById('reg-mpv-path').value.trim();
+  if(!mpvPath){toast('⚠ Βάλε πρώτα το path του mpv.exe!');return;}
+  // Escape backslashes για το registry format (C:\mpv\mpv.exe → C:\\mpv\\mpv.exe)
+  const escaped=mpvPath.replace(/\\/g,'\\\\');
+  const regContent=`Windows Registry Editor Version 5.00\r\n\r\n`+
+    `[HKEY_CLASSES_ROOT\\mpv]\r\n`+
+    `@="URL:MPV Protocol"\r\n`+
+    `"URL Protocol"=""\r\n\r\n`+
+    `[HKEY_CLASSES_ROOT\\mpv\\shell]\r\n\r\n`+
+    `[HKEY_CLASSES_ROOT\\mpv\\shell\\open]\r\n\r\n`+
+    `[HKEY_CLASSES_ROOT\\mpv\\shell\\open\\command]\r\n`+
+    `@="\\"${escaped}\\" \\"%1\\""\r\n`;
+  const blob=new Blob([regContent],{type:'text/plain'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='mpv-protocol.reg';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('✅ Κατεβαίνει το mpv-protocol.reg — τρέξε το στον νέο PC!');
 }
 
 document.getElementById('password').addEventListener('keydown',e=>{if(e.key==='Enter')connect();});

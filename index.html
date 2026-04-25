@@ -396,6 +396,7 @@ video#player{width:100%;height:100%;object-fit:contain;background:#000;display:b
         <div class="channel-header">
           <span class="channel-header-title" id="channel-panel-title">ΚΑΝΑΛΙΑ</span>
           <span class="ch-epg-status" id="ch-epg-status"></span>
+          <button onclick="scrollEpgToNow(true)" title="Πήγαινε στην τρέχουσα ώρα" style="background:rgba(255,62,108,.1);border:1px solid rgba(255,62,108,.3);border-radius:5px;padding:4px 8px;color:var(--accent3);font-size:11px;font-family:'Rajdhani',sans-serif;font-weight:700;cursor:pointer;letter-spacing:.5px;white-space:nowrap;flex-shrink:0;" onmouseover="this.style.background='rgba(255,62,108,.25)'" onmouseout="this.style.background='rgba(255,62,108,.1)'">🔴 ΤΩΡΑ</button>
           <input class="ch-search-mini" type="text" placeholder="🔍 Αναζήτηση..." oninput="filterChannels(this.value)"/>
         </div>
         <div class="epg-grid-outer">
@@ -518,6 +519,7 @@ let epgData={};        // { stream_id: [{title,start,stop},...] }
 let epgTimer=null;
 let epgBarOpen=false;
 let currentChId=null;
+let _userScrolledAt=0; // timestamp τελευταίου manual scroll του χρήστη στο EPG grid
 
 // ── ΠΕΡΙΟΔΙΚΟΣ ΚΑΘΑΡΙΣΜΟΣ ΜΝΗΜΗΣ (κάθε 30 λεπτά) ──
 // Αφαιρεί EPG δεδομένα από κανάλια που δεν παρακολουθούνται
@@ -973,14 +975,14 @@ function renderTimeRuler(){
 }
 
 // Scroll ώστε η τρέχουσα ώρα να φαίνεται αριστερά (με μικρό offset)
-function scrollEpgToNow(){
+// force=true: επαναφορά ακόμα και αν ο χρήστης έχει κάνει manual scroll
+function scrollEpgToNow(force=false){
   const area=document.getElementById('epg-scroll-area');
   if(!area) return;
   const gStart=epgGridStart();
   const nowX=timeToX(new Date(),gStart);
-  // Scroll ώστε η γραμμή ΤΩΡΑ να είναι ~150px από αριστερά
-  // (ώστε να φαίνεται λίγο από το παρελθόν)
-  area.scrollLeft=Math.max(0, nowX-150);
+  area.scrollTo({left:Math.max(0, nowX-150), behavior: force?'smooth':'auto'});
+  if(force) _userScrolledAt=0; // reset ώστε να ξαναρχίσει το auto-scroll
 }
 
 function channelHTML(ch, hasEpg, loading){
@@ -2186,6 +2188,8 @@ function syncEpgScroll(){
     _syncing=true;
     chList.scrollTop=area.scrollTop;
     _syncing=false;
+    // Καταγραφή manual scroll — αποτρέπει auto-scroll για 2 λεπτά
+    _userScrolledAt=Date.now();
   },{passive:true});
   chList.addEventListener('scroll',()=>{
     if(_syncing) return;
@@ -2367,16 +2371,19 @@ function refreshEpgNowPlaying(){
   updateEpgBar();
 
   // 4. Auto-scroll ώστε η γραμμή ΤΩΡΑ να φαίνεται πάντα στην οθόνη
-  // Μόνο αν ο χρήστης δεν έχει κάνει manual scroll μακριά
-  const area=document.getElementById('epg-scroll-area');
-  if(area){
-    const nowX=timeToX(new Date(),gStart);
-    const areaW=area.clientWidth;
-    const scrollL=area.scrollLeft;
-    const nowVisible=nowX>scrollL+40&&nowX<scrollL+areaW-40;
-    if(!nowVisible){
-      // Η NOW γραμμή βγήκε εκτός ορατού — κάνε smooth scroll
-      area.scrollTo({left:Math.max(0,nowX-80),behavior:'smooth'});
+  // ΜΟΝΟ αν ο χρήστης δεν έχει κάνει manual scroll τα τελευταία 2 λεπτά
+  const USER_SCROLL_GRACE_MS = 2 * 60 * 1000; // 2 λεπτά
+  const userScrolledRecently = (Date.now() - _userScrolledAt) < USER_SCROLL_GRACE_MS;
+  if(!userScrolledRecently){
+    const area=document.getElementById('epg-scroll-area');
+    if(area){
+      const nowX2=timeToX(new Date(),gStart);
+      const areaW=area.clientWidth;
+      const scrollL=area.scrollLeft;
+      const nowVisible=nowX2>scrollL+40&&nowX2<scrollL+areaW-40;
+      if(!nowVisible){
+        area.scrollTo({left:Math.max(0,nowX2-80),behavior:'smooth'});
+      }
     }
   }
 }

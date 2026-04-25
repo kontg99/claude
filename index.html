@@ -120,7 +120,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .epg-two-panel{flex:1;display:flex;overflow:hidden;min-height:0;}
 
 /* LEFT PANEL — fixed channel names, scrolls only vertically */
-.epg-ch-panel{width:200px;flex-shrink:0;display:flex;flex-direction:column;border-right:1px solid var(--border);overflow:hidden;}
+.epg-ch-panel{width:200px;min-width:120px;flex-shrink:0;display:flex;flex-direction:column;border-right:1px solid var(--border);overflow:hidden;}
 .epg-ch-panel-header{height:45px;flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--border);padding:6px 10px;font-size:10px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;display:flex;align-items:center;}
 .epg-ch-panel-list{flex:1;overflow-y:scroll;overflow-x:hidden;}
 .epg-ch-panel-list::-webkit-scrollbar{width:0px;}
@@ -166,14 +166,14 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .kb-focus{outline:2px solid var(--accent);outline-offset:-2px;}
 
 /* Left: logo + name — now lives in fixed left panel, not in row */
-.ch-left{width:200px;flex-shrink:0;padding:6px 10px;display:flex;align-items:center;gap:8px;border-right:none;cursor:pointer;background:var(--surface2);transition:background .1s;height:50px;border-bottom:1px solid rgba(255,255,255,.04);}
+.ch-left{width:100%;flex-shrink:0;padding:4px 8px;display:flex;align-items:center;gap:8px;border-right:none;cursor:pointer;background:var(--surface2);transition:background .1s;height:50px;border-bottom:1px solid rgba(255,255,255,.04);box-sizing:border-box;}
 /* Right-panel EPG row (no ch-left inside) */
 .channel-item:hover .ch-left{background:rgba(255,255,255,.02);}
 .channel-item.active .ch-left{background:rgba(0,212,255,.06);border-left:2px solid var(--accent);}
 .ch-left:hover .ch-name{color:var(--accent);}
 .ch-logo{width:30px;height:30px;border-radius:5px;background:var(--surface);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--muted);overflow:hidden;border:1px solid var(--border);}
 .ch-logo img{width:100%;height:100%;object-fit:cover;border-radius:4px;}
-.ch-name{font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text);transition:color .15s;flex:1;}
+.ch-name{font-size:11px;font-weight:600;color:var(--text);transition:color .15s;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 
 /* Right: EPG grid row — time-positioned slots */
 .ch-epg-row{flex:1;position:relative;overflow:hidden;}
@@ -843,16 +843,16 @@ let epgLoadTimer=null;
 
 // ── EPG GRID CONSTANTS ──
 const EPG_WINDOW_HOURS = 3;      // αρχικό παράθυρο (για scroll-to-now)
-const EPG_TOTAL_HOURS  = 168;    // 7 μέρες
+const EPG_TOTAL_HOURS  = 192;    // 8 μέρες (από αρχή σήμερα)
 const EPG_PX_PER_MIN  = 3;       // pixels ανά λεπτό
 
-// Επιστρέφει την ώρα έναρξης του grid (τρέχουσα ώρα, στρογγυλοποιημένη στο τελευταίο ήμισυ ώρας)
+// Επιστρέφει την ώρα έναρξης του grid — αρχή της ΣΗΜΕΡΙΝΗΣ ημέρας (00:00)
+// Έτσι η γραμμή ΤΩΡΑ είναι στη σωστή θέση μέσα στο grid
 function epgGridStart(){
   const now=new Date();
-  const ms=now.getTime();
-  // Στρογγυλοποίηση προς τα κάτω στο τελευταίο μισάωρο
-  const floor30=Math.floor(ms/(30*60000))*(30*60000);
-  return new Date(floor30);
+  const start=new Date(now);
+  start.setHours(0,0,0,0); // αρχή της σημερινής ημέρας
+  return start;
 }
 
 // Μετατρέπει χρόνο σε pixel offset από το gridStart
@@ -978,8 +978,9 @@ function scrollEpgToNow(){
   if(!area) return;
   const gStart=epgGridStart();
   const nowX=timeToX(new Date(),gStart);
-  // Scroll ώστε το NOW να είναι ~30px από αριστερά (αφαιρούμε το channel label width)
-  area.scrollLeft=Math.max(0, nowX-30);
+  // Scroll ώστε η γραμμή ΤΩΡΑ να είναι ~150px από αριστερά
+  // (ώστε να φαίνεται λίγο από το παρελθόν)
+  area.scrollLeft=Math.max(0, nowX-150);
 }
 
 function channelHTML(ch, hasEpg, loading){
@@ -2290,7 +2291,6 @@ window.addEventListener('DOMContentLoaded',()=>{
   if(savedFs) applyFontSize(savedFs);
 });
 
-// ── FONT SIZE ──
 function setFontSize(val){
   val=parseInt(val);
   document.getElementById('font-size-val').textContent=val+'px';
@@ -2301,8 +2301,6 @@ function applyFontSize(val){
   val=parseInt(val);
   document.getElementById('font-size-slider').value=val;
   document.getElementById('font-size-val').textContent=val+'px';
-  // Εφαρμογή σε channel names, category names, EPG titles
-  document.documentElement.style.setProperty('--ui-font-size', val+'px');
   const style=document.getElementById('dynamic-font-style')||document.createElement('style');
   style.id='dynamic-font-style';
   style.textContent=`
@@ -2367,6 +2365,20 @@ function refreshEpgNowPlaying(){
 
   // 3. Ανανέωσε EPG bar του τρέχοντος καναλιού
   updateEpgBar();
+
+  // 4. Auto-scroll ώστε η γραμμή ΤΩΡΑ να φαίνεται πάντα στην οθόνη
+  // Μόνο αν ο χρήστης δεν έχει κάνει manual scroll μακριά
+  const area=document.getElementById('epg-scroll-area');
+  if(area){
+    const nowX=timeToX(new Date(),gStart);
+    const areaW=area.clientWidth;
+    const scrollL=area.scrollLeft;
+    const nowVisible=nowX>scrollL+40&&nowX<scrollL+areaW-40;
+    if(!nowVisible){
+      // Η NOW γραμμή βγήκε εκτός ορατού — κάνε smooth scroll
+      area.scrollTo({left:Math.max(0,nowX-80),behavior:'smooth'});
+    }
+  }
 }
 
 // ── RESIZE HANDLES ──

@@ -2312,6 +2312,9 @@ function applyFontSize(val){
     .cat-item{font-size:${val}px !important;}
     .epg-s-title{font-size:${Math.max(val,11)}px !important;}
     .ch-epg-slot .slot-title{font-size:${Math.max(val-2,9)}px !important;}
+    .ch-epg-slot .slot-time{font-size:${Math.max(val-3,8)}px !important;}
+    .epg-ruler-tick-label{font-size:${Math.max(val-3,8)}px !important;}
+    .epg-day-banner{font-size:${Math.max(val-4,7)}px !important;}
   `;
   if(!style.parentNode) document.head.appendChild(style);
 }

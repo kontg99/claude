@@ -84,6 +84,12 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .cat-item:hover .fav-btn{opacity:.85;}
 .fav-btn.active{opacity:1;transform:scale(1.1);color:#ffd700;}
 
+/* ── CATEGORY RENAME ── */
+.cat-rename-input{background:var(--surface2);border:1px solid var(--accent);border-radius:4px;padding:2px 6px;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:13px;outline:none;width:100%;min-width:0;}
+.cat-item .cat-rename-hint{font-size:9px;color:var(--muted);opacity:0;transition:opacity .2s;letter-spacing:.5px;white-space:nowrap;flex-shrink:0;margin-left:2px;}
+.cat-item:hover .cat-rename-hint{opacity:.6;}
+.cat-alias-badge{font-size:8px;color:var(--accent2);letter-spacing:.5px;flex-shrink:0;opacity:.7;}
+
 /* Drag & drop κατηγορίες */
 .cat-item.drag-over{background:rgba(0,212,255,.15);border:1px dashed var(--accent);}
 .cat-item[draggable="true"]{cursor:grab;}
@@ -397,6 +403,7 @@ video#player{width:100%;height:100%;object-fit:contain;background:#000;display:b
           <span class="channel-header-title" id="channel-panel-title">ΚΑΝΑΛΙΑ</span>
           <span class="ch-epg-status" id="ch-epg-status"></span>
           <button onclick="scrollEpgToNow(true)" title="Πήγαινε στην τρέχουσα ώρα" style="background:rgba(255,62,108,.1);border:1px solid rgba(255,62,108,.3);border-radius:5px;padding:4px 8px;color:var(--accent3);font-size:11px;font-family:'Rajdhani',sans-serif;font-weight:700;cursor:pointer;letter-spacing:.5px;white-space:nowrap;flex-shrink:0;" onmouseover="this.style.background='rgba(255,62,108,.25)'" onmouseout="this.style.background='rgba(255,62,108,.1)'">🔴 ΤΩΡΑ</button>
+          <button id="ext-btn-header" onclick="openExtPlayer()" title="Εξωτερικός Player" style="background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.25);border-radius:5px;padding:4px 8px;color:var(--accent);font-size:11px;font-family:'Rajdhani',sans-serif;font-weight:700;cursor:pointer;letter-spacing:.5px;white-space:nowrap;flex-shrink:0;display:none;" onmouseover="this.style.background='rgba(0,212,255,.22)'" onmouseout="this.style.background='rgba(0,212,255,.08)'">📡 EXT</button>
           <input class="ch-search-mini" type="text" placeholder="🔍 Αναζήτηση..." oninput="filterChannels(this.value)"/>
         </div>
         <div class="epg-grid-outer">
@@ -535,6 +542,75 @@ setInterval(()=>{
   }
   if(removed>0) console.log(`[Memory] Καθαρίστηκαν EPG δεδομένα ${removed} καναλιών`);
 }, 30*60*1000);
+
+// ── SINGLE vs DOUBLE CLICK για κατηγορίες ──
+let _catClickTimer=null;
+let _catClickCount=0;
+
+function catItemClick(e, id, originalName){
+  // Αν κλικ σε fav button αγνοούμε (έχει δικό του handler)
+  if(e.target.closest('.fav-btn')) return;
+  _catClickCount++;
+  if(_catClickTimer) clearTimeout(_catClickTimer);
+  if(_catClickCount>=2){
+    _catClickCount=0;
+    // Double click → rename
+    startCatRename(id, originalName, e.currentTarget, e);
+    return;
+  }
+  _catClickTimer=setTimeout(()=>{
+    _catClickCount=0;
+    _catClickTimer=null;
+    // Single click → select
+    selectCategory(id, originalName);
+  }, 260);
+}
+
+// ── CATEGORY ALIASES (τοπικά custom ονόματα κατηγοριών) ──
+function getCatAliases(){ try{return JSON.parse(localStorage.getItem('ns_cat_aliases')||'{}');}catch{return{};} }
+function saveCatAliases(obj){ localStorage.setItem('ns_cat_aliases',JSON.stringify(obj)); }
+function getCatDisplayName(id, originalName){
+  const aliases=getCatAliases();
+  return aliases[String(id)]||originalName;
+}
+
+function startCatRename(id, originalName, el, e){
+  e.stopPropagation();
+  // Βρες το .cat-name span μέσα στο cat-item
+  const catItem=el.closest('.cat-item');
+  if(!catItem) return;
+  const nameSpan=catItem.querySelector('.cat-name');
+  if(!nameSpan) return;
+  const currentName=getCatDisplayName(id, originalName);
+  const input=document.createElement('input');
+  input.className='cat-rename-input';
+  input.value=currentName;
+  input.title='Πάτα Enter για αποθήκευση, Esc για ακύρωση';
+  nameSpan.replaceWith(input);
+  input.focus();
+  input.select();
+  function save(){
+    const newName=input.value.trim();
+    if(newName && newName!==originalName){
+      const aliases=getCatAliases();
+      aliases[String(id)]=newName;
+      saveCatAliases(aliases);
+      toast('✅ Μετονομάστηκε: '+newName);
+    } else if(!newName || newName===originalName){
+      // Επαναφορά αν κενό ή ίδιο με original
+      const aliases=getCatAliases();
+      delete aliases[String(id)];
+      saveCatAliases(aliases);
+      if(!newName||newName===originalName) toast('↩ Επαναφορά αρχικού ονόματος');
+    }
+    renderCategories(document.getElementById('cat-search').value);
+  }
+  input.addEventListener('keydown', e2=>{
+    if(e2.key==='Enter'){ e2.preventDefault(); save(); }
+    if(e2.key==='Escape'){ e2.stopPropagation(); renderCategories(document.getElementById('cat-search').value); }
+  });
+  input.addEventListener('blur', save);
+}
 
 // ── FAVORITES ΚΑΤΗΓΟΡΙΕΣ ── (localStorage)
 function getFavs(){ try{return JSON.parse(localStorage.getItem('ns_favs')||'[]');}catch{return[];} }
@@ -704,7 +780,7 @@ function logout(){
   document.getElementById('app').style.display='none';
   document.getElementById('login-screen').style.display='flex';
   S={server:'',user:'',pass:'',categories:[],vodCats:[],seriesCats:[],channels:{},currentCat:null,currentChannel:null};
-  vodCache={};seriesCache={};epgData={};currentChId=null;allChannelsCache=null;
+  vodCache={};seriesCache={};epgData={};currentChId=null;allChannelsCache=null;lastChannelUrl='';currentStreamUrl='';
   epgLoadQueue.clear(); if(epgObserver){epgObserver.disconnect();epgObserver=null;}
   document.getElementById('ch-epg-status').textContent='';
   document.getElementById('server-display').innerHTML='';
@@ -777,10 +853,14 @@ function renderCategories(filter=''){
 
 function catHTML(c,fav,draggable){
   const active=S.currentCat===c.category_id;
+  const aliases=getCatAliases();
+  const hasAlias=!!aliases[String(c.category_id)];
+  const displayName=hasAlias?aliases[String(c.category_id)]:c.category_name;
   return `<div class="cat-item${active?' active':''}"
     ${draggable?`draggable="true" data-cat-id="${esc(c.category_id)}" data-cat-fav="${fav}"`:''}
-    onclick="selectCategory('${esc(c.category_id)}','${esc(c.category_name)}')">
-    <span class="cat-name">${esc(c.category_name)}</span>
+    onclick="catItemClick(event,'${esc(c.category_id)}','${esc(c.category_name)}')"
+    title="Κλικ για επιλογή | Διπλό κλικ για μετονομασία">
+    <span class="cat-name">${esc(displayName)}${hasAlias?` <span class="cat-alias-badge" title="Αρχικό: ${esc(c.category_name)}">✎</span>`:''}</span>
     <button class="fav-btn${fav?' active':''}" onclick="toggleFav('${esc(c.category_id)}',event)"
       title="${fav?'Αφαίρεση από αγαπημένα':'Προσθήκη στα αγαπημένα'}">${fav?'⭐':'☆'}</button>
   </div>`;
@@ -823,11 +903,11 @@ function setupCatDragDrop(){
 async function selectCategory(id,name){
   S.currentCat=id;
   kbChIdx=0;
-  // Καθάρισε την ουρά EPG φόρτωσης όταν αλλάζεις κατηγορία
   epgLoadQueue.clear();
   if(epgObserver){epgObserver.disconnect();epgObserver=null;}
   renderCategories(document.getElementById('cat-search').value);
-  document.getElementById('channel-panel-title').textContent=name.toUpperCase();
+  const displayName=getCatDisplayName(id,name);
+  document.getElementById('channel-panel-title').textContent=displayName.toUpperCase();
   const list=document.getElementById('channels-list');
   list.innerHTML='<div class="empty-state"><div class="spinner"></div></div>';
   if(S.channels[id]){renderChannels(S.channels[id]);return;}
@@ -1472,6 +1552,8 @@ function doPlay(url,label){
   vid.load();
 
   currentStreamUrl=url;
+  lastChannelUrl=url;
+  updateExtBtn();
   const extBtn=document.getElementById('ext-btn');
   if(extBtn) extBtn.style.display='';
   const stopBtn=document.getElementById('stop-btn');
@@ -1601,6 +1683,8 @@ function stopStream(){
   showReconnectIndicator(false);
   stopCurrentStream();
   currentStreamUrl='';
+  lastChannelUrl='';
+  updateExtBtn();
   currentChId=null;
   S.currentChannel=null;
   clearInterval(epgTimer);
@@ -1681,8 +1765,19 @@ window.addEventListener('DOMContentLoaded',()=>{
 
 // ── EXTERNAL PLAYER ──
 let currentStreamUrl='';
+let lastChannelUrl=''; // Κρατάει το URL ακόμα και όταν παίζει MPV
+
+function updateExtBtn(){
+  const url=lastChannelUrl||currentStreamUrl;
+  const btn=document.getElementById('ext-btn-header');
+  if(btn) btn.style.display=url?'':'none';
+  const btn2=document.getElementById('ext-btn');
+  if(btn2) btn2.style.display=currentStreamUrl?'':'none';
+}
+
 function openExtPlayer(){
-  if(!currentStreamUrl) return;
+  const url=lastChannelUrl||currentStreamUrl;
+  if(!url) return;
   document.getElementById('ext-player-modal').classList.add('open');
 }
 function closeExtPlayer(){
@@ -1713,6 +1808,8 @@ function openMpvDirect(ch){
   epgTimer=setInterval(updateEpgBar,30000);
   const ext=ch.container_extension||'ts';
   const url=`${S.server}/live/${enc(S.user)}/${enc(S.pass)}/${ch.stream_id}.${ext}`;
+  lastChannelUrl=url;
+  updateExtBtn();
   // Χρησιμοποιούμε custom MPV path αν υπάρχει
   const mpvPath=getMpvPath();
   let mpvUrl;
@@ -1738,9 +1835,10 @@ function closeMpv(){
   document.body.removeChild(a);
 }
 function openMpv(){
-  if(!currentStreamUrl) return;
+  const url=lastChannelUrl||currentStreamUrl;
+  if(!url) return;
   closeExtPlayer();
-  const mpvUrl='mpv://'+currentStreamUrl;
+  const mpvUrl='mpv://'+url;
   const a=document.createElement('a');
   a.href=mpvUrl;
   document.body.appendChild(a);
@@ -1749,11 +1847,11 @@ function openMpv(){
   toast('▶ Άνοιγμα στο MPV...');
 }
 function downloadM3u(){
-  // Σταμάτα το stream πρώτα
   stopCurrentStream();
   closeExtPlayer();
+  const url=lastChannelUrl||currentStreamUrl;
   const chName = document.querySelector('#now-playing-info .channel-name')?.textContent || 'channel';
-  const m3u = `#EXTM3U\n#EXTINF:-1,${chName}\n${currentStreamUrl}\n`;
+  const m3u = `#EXTM3U\n#EXTINF:-1,${chName}\n${url}\n`;
   const blob = new Blob([m3u], {type:'application/x-mpegurl'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -1773,12 +1871,12 @@ function stopCurrentStream(){
   if(btn){btn.textContent='⏸';btn.classList.remove('pause-active');}
 }
 function copyStreamUrl(){
-  navigator.clipboard.writeText(currentStreamUrl).then(()=>{
+  const url=lastChannelUrl||currentStreamUrl;
+  navigator.clipboard.writeText(url).then(()=>{
     toast('✅ URL αντιγράφηκε!');
   }).catch(()=>{
-    // Fallback
     const ta=document.createElement('textarea');
-    ta.value=currentStreamUrl;
+    ta.value=url;
     document.body.appendChild(ta);
     ta.select();
     document.execCommand('copy');

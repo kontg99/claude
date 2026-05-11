@@ -27,6 +27,11 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Generate gradlew
+        run: |
+          cd nova-android
+          gradle wrapper --gradle-version 8.4
+
       - name: Make gradlew executable
         run: chmod +x nova-android/gradlew
 

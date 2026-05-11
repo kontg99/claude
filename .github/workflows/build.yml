@@ -4,7 +4,7 @@ on:
   push:
     branches: [ main ]
     paths:
-      - 'android/**'
+      - 'nova-android/**'
   workflow_dispatch:
 
 env:
@@ -28,18 +28,15 @@ jobs:
         uses: android-actions/setup-android@v3
 
       - name: Make gradlew executable
-        run: |
-          cd android
-          gradle wrapper
-          chmod +x gradlew
+        run: chmod +x nova-android/gradlew
 
       - name: Build Debug APK
         run: ./gradlew assembleDebug
-        working-directory: android
+        working-directory: nova-android
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: nova-stream-debug
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: nova-android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30

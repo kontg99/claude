@@ -892,7 +892,8 @@ function catHTML(c,fav,draggable){
   const hasAlias=!!aliases[String(c.category_id)];
   const displayName=hasAlias?aliases[String(c.category_id)]:c.category_name;
   return `<div class="cat-item${active?' active':''}"
-    ${draggable?`draggable="true" data-cat-id="${esc(c.category_id)}" data-cat-fav="${fav}"`:''}
+    data-cat-id="${esc(c.category_id)}"
+    ${draggable?`draggable="true" data-cat-fav="${fav}"`:''}
     onclick="catItemClick(event,'${esc(c.category_id)}','${esc(c.category_name)}')"
     title="Κλικ για επιλογή | Διπλό κλικ για μετονομασία">
     <span class="cat-name">${esc(displayName)}${hasAlias?` <span class="cat-alias-badge" title="Αρχικό: ${esc(c.category_name)}">✎</span>`:''}</span>
@@ -938,10 +939,17 @@ function setupCatDragDrop(){
 async function selectCategory(id,name){
   S.currentCat=id;
   kbChIdx=0;
+  kbFocus='ch';
   clearChSelection();
   epgLoadQueue.clear();
   if(epgObserver){epgObserver.disconnect();epgObserver=null;}
   renderCategories(document.getElementById('cat-search').value);
+  // Συγχρόνισε kbCatIdx με την κατηγορία που επιλέχθηκε με ποντίκι
+  setTimeout(()=>{
+    const catItems=getVisibleCatItems();
+    const idx=catItems.findIndex(el=>el.dataset.catId===String(id));
+    if(idx>=0) kbCatIdx=idx;
+  },0);
   const displayName=getCatDisplayName(id,name);
   document.getElementById('channel-panel-title').textContent=displayName.toUpperCase();
   const list=document.getElementById('channels-list');
@@ -1715,6 +1723,11 @@ function fmtTime(d){
 function playLive(ch){
   S.currentChannel=ch.stream_id;
   currentChId=ch.stream_id;
+  // Συγχρόνισε keyboard navigation
+  kbFocus='ch';
+  const chItems=getVisibleChItems();
+  const chIdx=chItems.findIndex(el=>el.dataset.streamId===String(ch.stream_id));
+  if(chIdx>=0) kbChIdx=chIdx;
   if(S.currentCat&&S.channels[S.currentCat]) renderChannels(applyChOrder(S.channels[S.currentCat],S.currentCat),document.querySelector('.ch-search-mini').value);
   const ext=ch.container_extension||'ts';
   const url=`${S.server}/live/${enc(S.user)}/${enc(S.pass)}/${ch.stream_id}.${ext}`;
@@ -2119,6 +2132,11 @@ function openMpvDirect(ch){
   currentStreamUrl='';
   S.currentChannel=ch.stream_id;
   currentChId=ch.stream_id;
+  // Συγχρόνισε keyboard navigation με το ποντίκι
+  kbFocus='ch';
+  const chItems=getVisibleChItems();
+  const chIdx=chItems.findIndex(el=>el.dataset.streamId===String(ch.stream_id));
+  if(chIdx>=0) kbChIdx=chIdx;
   // Highlighted κανάλι
   updatePlayingHighlight();
   // Ενημέρωσε το active state στη λίστα

@@ -100,6 +100,34 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .ch-left:hover .ch-fav-btn{opacity:.55;}
 .ch-fav-btn.active{opacity:1 !important;color:#ffd700;}
 
+/* ── CHANNEL DRAG & DROP ── */
+.ch-left[draggable="true"]{cursor:grab;}
+.ch-left[draggable="true"]:active{cursor:grabbing;}
+.ch-left.ch-drag-over-top{border-top:2px solid var(--accent) !important;margin-top:-2px;}
+.ch-left.ch-drag-over-bottom{border-bottom:2px solid var(--accent) !important;}
+.ch-left.ch-dragging{opacity:.35;background:rgba(0,212,255,.05) !important;}
+/* drag handle icon — εμφανίζεται στο hover */
+.ch-drag-handle{font-size:10px;color:var(--muted);opacity:0;flex-shrink:0;cursor:grab;padding:0 2px;transition:opacity .15s;line-height:1;user-select:none;}
+.ch-left:hover .ch-drag-handle{opacity:.4;}
+
+/* ── MULTI-SELECT ── */
+.ch-left.ch-selected{background:rgba(0,212,255,.18) !important;border-left:3px solid var(--accent) !important;}
+.ch-left.ch-selected .ch-name{color:var(--accent);}
+.ch-left.ch-selected .ch-drag-handle{opacity:.7;color:var(--accent);}
+#ch-select-bar{display:none;align-items:center;gap:10px;padding:6px 12px;background:rgba(0,212,255,.08);border-bottom:1px solid rgba(0,212,255,.25);font-size:12px;color:var(--accent);letter-spacing:.5px;flex-shrink:0;}
+#ch-select-bar.visible{display:flex;}
+#ch-select-bar button{background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.3);border-radius:5px;color:var(--accent);font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;padding:3px 10px;cursor:pointer;letter-spacing:.5px;}
+#ch-select-bar button:hover{background:rgba(0,212,255,.25);}
+#ch-select-bar .sel-deselect{color:var(--accent3);border-color:rgba(255,62,108,.3);background:rgba(255,62,108,.08);}
+#ch-select-bar .sel-deselect:hover{background:rgba(255,62,108,.2);}
+#ch-drag-ghost{position:fixed;pointer-events:none;z-index:9999;background:var(--surface);border:1px solid var(--accent);border-radius:8px;padding:8px 14px;font-family:'Rajdhani',sans-serif;font-size:13px;color:var(--accent);font-weight:700;letter-spacing:1px;box-shadow:0 4px 20px rgba(0,212,255,.3);display:none;}
+
+/* ── CHANNEL RENAME ── */
+.ch-rename-input{background:var(--surface2);border:1px solid var(--accent);border-radius:4px;padding:2px 6px;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:600;outline:none;width:100%;min-width:0;}
+.ch-alias-badge{font-size:8px;color:var(--accent2);opacity:.7;flex-shrink:0;margin-left:2px;cursor:pointer;}
+.ch-left .ch-rename-hint{font-size:8px;color:var(--muted);opacity:0;letter-spacing:.5px;white-space:nowrap;flex-shrink:0;transition:opacity .15s;}
+.ch-left:hover .ch-rename-hint{opacity:.5;}
+
 /* Playing channel — πλήρες έντονο highlight */
 .ch-left.playing-ch{
   background:linear-gradient(90deg,rgba(0,212,255,.5),rgba(0,212,255,.25)) !important;
@@ -403,6 +431,7 @@ video#player{width:100%;height:100%;object-fit:contain;background:#000;display:b
           <span class="channel-header-title" id="channel-panel-title">ΚΑΝΑΛΙΑ</span>
           <span class="ch-epg-status" id="ch-epg-status"></span>
           <button onclick="scrollEpgToNow(true)" title="Πήγαινε στην τρέχουσα ώρα" style="background:rgba(255,62,108,.1);border:1px solid rgba(255,62,108,.3);border-radius:5px;padding:4px 8px;color:var(--accent3);font-size:11px;font-family:'Rajdhani',sans-serif;font-weight:700;cursor:pointer;letter-spacing:.5px;white-space:nowrap;flex-shrink:0;" onmouseover="this.style.background='rgba(255,62,108,.25)'" onmouseout="this.style.background='rgba(255,62,108,.1)'">🔴 ΤΩΡΑ</button>
+          <button id="reset-ch-order-btn" onclick="resetChOrder()" title="Επαναφορά αρχικής σειράς καναλιών" style="display:none;background:rgba(255,180,0,.08);border:1px solid rgba(255,180,0,.25);border-radius:5px;padding:4px 8px;color:#ffd700;font-size:11px;font-family:'Rajdhani',sans-serif;font-weight:700;cursor:pointer;letter-spacing:.5px;white-space:nowrap;flex-shrink:0;" onmouseover="this.style.background='rgba(255,180,0,.2)'" onmouseout="this.style.background='rgba(255,180,0,.08)'">↺ Σειρά</button>
           <button id="ext-btn-header" onclick="openExtPlayer()" title="Εξωτερικός Player" style="background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.25);border-radius:5px;padding:4px 8px;color:var(--accent);font-size:11px;font-family:'Rajdhani',sans-serif;font-weight:700;cursor:pointer;letter-spacing:.5px;white-space:nowrap;flex-shrink:0;display:none;" onmouseover="this.style.background='rgba(0,212,255,.22)'" onmouseout="this.style.background='rgba(0,212,255,.08)'">📡 EXT</button>
           <input class="ch-search-mini" type="text" placeholder="🔍 Αναζήτηση..." oninput="filterChannels(this.value)"/>
         </div>
@@ -410,7 +439,12 @@ video#player{width:100%;height:100%;object-fit:contain;background:#000;display:b
           <div class="epg-two-panel">
             <!-- Αριστερά: σταθερή στήλη καναλιών -->
             <div class="epg-ch-panel" id="epg-ch-panel">
-              <div class="epg-ch-panel-header">📅 EPG</div>
+              <div class="epg-ch-panel-header" title="⠿ Σύρε | Ctrl+Click = πολλαπλή επιλογή | Διπλό κλικ = μετονομασία">📅 EPG &nbsp;<span style="font-size:8px;opacity:.4;letter-spacing:.5px;">CTRL+ΚΛΙΚ=ΠΟΛΛΑΠΛΗ</span></div>
+              <div id="ch-select-bar">
+                <span id="ch-select-count">0 επιλεγμένα</span>
+                <button onclick="selectAllChannels()">☑ Όλα</button>
+                <button class="sel-deselect" onclick="clearChSelection()">✕ Αποεπιλογή</button>
+              </div>
               <div class="epg-ch-panel-list" id="epg-ch-panel-list"></div>
             </div>
             <div class="resize-handle" id="rh-chs" title="Σύρε για αλλαγή πλάτους λίστας καναλιών"></div>
@@ -649,7 +683,7 @@ function toggleChFav(ch, e){
   saveChFavs(favs);
   // Ανανέωσε αριστερό panel αν είμαστε σε κατηγορία
   if(S.currentCat&&S.channels[S.currentCat])
-    renderChannels(S.channels[S.currentCat], document.querySelector('.ch-search-mini')?.value||'');
+    renderChannels(applyChOrder(S.channels[S.currentCat],S.currentCat), document.querySelector('.ch-search-mini')?.value||'');
   // Αν βλέπουμε τα favorites, ανανέωσε
   if(S.currentCat==='__ch_favs__') showChFavorites();
 }
@@ -658,6 +692,7 @@ function showChFavorites(){
   S.currentCat='__ch_favs__';
   renderCategories(document.getElementById('cat-search').value);
   document.getElementById('channel-panel-title').textContent='⭐ ΑΓΑΠΗΜΕΝΑ ΚΑΝΑΛΙΑ';
+  updateResetOrderBtn();
   const favIds=getChFavs();
   const data=getChFavData();
   const favChs=favIds.map(id=>data[id]).filter(Boolean);
@@ -903,6 +938,7 @@ function setupCatDragDrop(){
 async function selectCategory(id,name){
   S.currentCat=id;
   kbChIdx=0;
+  clearChSelection();
   epgLoadQueue.clear();
   if(epgObserver){epgObserver.disconnect();epgObserver=null;}
   renderCategories(document.getElementById('cat-search').value);
@@ -910,11 +946,12 @@ async function selectCategory(id,name){
   document.getElementById('channel-panel-title').textContent=displayName.toUpperCase();
   const list=document.getElementById('channels-list');
   list.innerHTML='<div class="empty-state"><div class="spinner"></div></div>';
-  if(S.channels[id]){renderChannels(S.channels[id]);return;}
+  if(S.channels[id]){renderChannels(applyChOrder(S.channels[id],id));updateResetOrderBtn();return;}
   try{
     const res=await fetch(apiUrl('get_live_streams','&category_id='+enc(id)));
     S.channels[id]=await res.json();
-    renderChannels(S.channels[id]);
+    renderChannels(applyChOrder(S.channels[id],id));
+    updateResetOrderBtn();
   }catch(e){list.innerHTML='<div class="empty-state"><div class="icon">⚠</div><p>Σφάλμα φόρτωσης</p></div>';}
 }
 
@@ -959,15 +996,8 @@ function renderChannels(channels,filter=''){
 
   // Αριστερό panel: μόνο ονόματα καναλιών
   if(chPanel){
-    chPanel.innerHTML=filtered.map(ch=>{
-      const isPlaying=S.currentChannel===ch.stream_id;
-      const isFavCh=isChFav(ch.stream_id);
-      return `<div class="ch-left${isPlaying?' playing-ch':''}" data-stream-id="${ch.stream_id}" onclick='openMpvDirect(${JSON.stringify(ch)})'>
-        <div class="ch-logo">${ch.stream_icon?`<img src="${esc(ch.stream_icon)}" loading="lazy" onerror="this.style.display='none'"/>`:'📺'}</div>
-        <div class="ch-name" title="${esc(ch.name)}">${esc(ch.name)}</div>
-        <button class="ch-fav-btn${isFavCh?' active':''}" onclick='event.stopPropagation();toggleChFav(${JSON.stringify(ch)},event)' title="${isFavCh?'Αφαίρεση από αγαπημένα':'Προσθήκη στα αγαπημένα'}">⭐</button>
-      </div>`;
-    }).join('');
+    chPanel.innerHTML=filtered.map(ch=>chLeftHTML(ch)).join('');
+    setupChDragDrop(chPanel);
   }
 
   // Δεξί panel: EPG rows χωρίς ch-left
@@ -981,6 +1011,270 @@ function renderChannels(channels,filter=''){
   updateEpgStatusBar(filtered);
   scrollEpgToNow();
   syncEpgScroll();
+}
+
+// ── CHANNEL ALIASES (τοπικά custom ονόματα καναλιών) ──
+function getChAliases(){ try{return JSON.parse(localStorage.getItem('ns_ch_aliases')||'{}');}catch{return{};} }
+function saveChAliases(obj){ localStorage.setItem('ns_ch_aliases',JSON.stringify(obj)); }
+function getChDisplayName(streamId, originalName){
+  const a=getChAliases(); return a[String(streamId)]||originalName;
+}
+
+// ── CHANNEL ORDER (custom σειρά ανά κατηγορία) ──
+function getChOrder(catId){ try{return JSON.parse(localStorage.getItem('ns_ch_order_'+catId)||'null');}catch{return null;} }
+function saveChOrder(catId, idArr){ localStorage.setItem('ns_ch_order_'+catId, JSON.stringify(idArr)); }
+
+// Εφαρμόζει αποθηκευμένη σειρά στη λίστα καναλιών
+function applyChOrder(channels, catId){
+  const order=getChOrder(catId);
+  if(!order||!order.length) return channels;
+  const map=new Map(channels.map(c=>[String(c.stream_id),c]));
+  const sorted=order.map(id=>map.get(String(id))).filter(Boolean);
+  // Κανάλια που δεν είναι στο order (νέα) → στο τέλος
+  const inOrder=new Set(order.map(String));
+  channels.forEach(c=>{ if(!inOrder.has(String(c.stream_id))) sorted.push(c); });
+  return sorted;
+}
+
+// HTML για ένα κανάλι στο αριστερό panel
+function chLeftHTML(ch){
+  const isPlaying=S.currentChannel===ch.stream_id;
+  const isFavCh=isChFav(ch.stream_id);
+  const aliases=getChAliases();
+  const hasAlias=!!aliases[String(ch.stream_id)];
+  const displayName=hasAlias?aliases[String(ch.stream_id)]:ch.name;
+  return `<div class="ch-left${isPlaying?' playing-ch':''}" draggable="true"
+    data-stream-id="${ch.stream_id}"
+    data-original-name="${esc(ch.name)}"
+    onclick='chLeftClick(event,${JSON.stringify(ch)})'>
+    <span class="ch-drag-handle" title="Σύρε για αλλαγή σειράς">⠿</span>
+    <div class="ch-logo">${ch.stream_icon?`<img src="${esc(ch.stream_icon)}" loading="lazy" onerror="this.style.display='none'"/>`:'📺'}</div>
+    <div class="ch-name" title="${esc(ch.name)}">${esc(displayName)}${hasAlias?` <span class="ch-alias-badge" title="Αρχικό: ${esc(ch.name)}">✎</span>`:''}</div>
+    <button class="ch-fav-btn${isFavCh?' active':''}" onclick='event.stopPropagation();toggleChFav(${JSON.stringify(ch)},event)' title="${isFavCh?'Αφαίρεση από αγαπημένα':'Προσθήκη στα αγαπημένα'}">⭐</button>
+  </div>`;
+}
+
+// Click σε ch-left: Ctrl+click=select, single=MPV (με debounce), double=rename
+let _chLeftClickTimer=null;
+function chLeftClick(e, ch){
+  if(e.target.closest('.ch-fav-btn')) return;
+  if(e.target.closest('.ch-rename-input')) return;
+  if(e.target.closest('.ch-drag-handle')) return;
+
+  // Ctrl/Meta+Click → multi-select toggle (χωρίς debounce)
+  if(e.ctrlKey || e.metaKey){
+    clearTimeout(_chLeftClickTimer);
+    toggleChSelect(String(ch.stream_id));
+    return;
+  }
+
+  // Αν υπάρχει ενεργή επιλογή → κλικ χωρίς Ctrl αποεπιλέγει όλα & παίζει
+  if(_chSelected.size>0){
+    clearChSelection();
+  }
+
+  // Debounce: περίμενε 220ms — αν έρθει dblclick ακυρώνεται
+  clearTimeout(_chLeftClickTimer);
+  _chLeftClickTimer=setTimeout(()=>{
+    openMpvDirect(ch);
+  }, 220);
+}
+
+// ── CHANNEL RENAME (double-click) ──
+let _chClickTimer=null;
+let _chClickCount=0;
+
+function startChRename(streamId, originalName, el, e){
+  e.stopPropagation();
+  // Βρες το .ch-name div
+  const nameDiv=el.querySelector('.ch-name');
+  if(!nameDiv) return;
+  const currentName=getChDisplayName(streamId, originalName);
+  const input=document.createElement('input');
+  input.className='ch-rename-input';
+  input.value=currentName;
+  input.title='Enter για αποθήκευση | Esc για ακύρωση | Κενό για επαναφορά αρχικού';
+  nameDiv.replaceWith(input);
+  input.focus();
+  input.select();
+
+  function save(){
+    const newName=input.value.trim();
+    const aliases=getChAliases();
+    if(newName && newName!==originalName){
+      aliases[String(streamId)]=newName;
+      saveChAliases(aliases);
+      toast('✅ Μετονομάστηκε: '+newName);
+    } else {
+      // Κενό ή ίδιο = επαναφορά
+      delete aliases[String(streamId)];
+      saveChAliases(aliases);
+      if(!newName) toast('↩ Επαναφορά αρχικού ονόματος');
+    }
+    // Ανανέωσε μόνο αυτό το ch-left χωρίς re-render όλης της λίστας
+    const ch=currentChannelList.find(c=>String(c.stream_id)===String(streamId));
+    if(ch){
+      const newDiv=document.createElement('div');
+      newDiv.innerHTML=chLeftHTML(ch);
+      const newEl=newDiv.firstElementChild;
+      el.replaceWith(newEl);
+      setupChDragDrop(newEl.parentElement);
+    }
+  }
+  input.addEventListener('keydown', ev=>{
+    if(ev.key==='Enter'){ ev.preventDefault(); save(); }
+    if(ev.key==='Escape'){ ev.stopPropagation();
+      // Απλή επαναφορά του div χωρίς αποθήκευση
+      const ch=currentChannelList.find(c=>String(c.stream_id)===String(streamId));
+      if(ch){ const nd=document.createElement('div'); nd.innerHTML=chLeftHTML(ch); el.replaceWith(nd.firstElementChild); setupChDragDrop(nd.firstElementChild?.parentElement); }
+    }
+  });
+  input.addEventListener('blur', save, {once:true});
+}
+
+// ── MULTI-SELECT STATE ──
+let _chSelected=new Set(); // Set of stream_id strings
+
+function toggleChSelect(streamId){
+  if(_chSelected.has(streamId)) _chSelected.delete(streamId);
+  else _chSelected.add(streamId);
+  updateChSelectUI();
+}
+function clearChSelection(){
+  _chSelected.clear();
+  updateChSelectUI();
+}
+function selectAllChannels(){
+  const container=document.getElementById('epg-ch-panel-list');
+  if(!container) return;
+  container.querySelectorAll('.ch-left[data-stream-id]').forEach(el=>{
+    _chSelected.add(el.dataset.streamId);
+  });
+  updateChSelectUI();
+}
+function updateChSelectUI(){
+  const container=document.getElementById('epg-ch-panel-list');
+  if(container){
+    container.querySelectorAll('.ch-left[data-stream-id]').forEach(el=>{
+      el.classList.toggle('ch-selected', _chSelected.has(el.dataset.streamId));
+    });
+  }
+  const bar=document.getElementById('ch-select-bar');
+  const count=document.getElementById('ch-select-count');
+  if(bar) bar.classList.toggle('visible', _chSelected.size>0);
+  if(count) count.textContent=_chSelected.size+' επιλεγμένα';
+}
+
+// ── CHANNEL DRAG & DROP (single + multi) ──
+let _chDragSrcId=null;
+
+function setupChDragDrop(container){
+  if(!container) return;
+  const items=container.querySelectorAll('.ch-left[draggable="true"]');
+  items.forEach(el=>{
+    el.addEventListener('dragstart', e=>{
+      _chDragSrcId=el.dataset.streamId;
+      e.dataTransfer.effectAllowed='move';
+
+      // Αν το dragged item ΔΕΝ είναι στο selection → drag μόνο αυτό
+      if(!_chSelected.has(_chDragSrcId)){
+        clearChSelection();
+      }
+      // Αν δεν υπάρχει selection, βάλε μόνο αυτό για το drag
+      const dragIds=_chSelected.size>0 ? [..._chSelected] : [_chDragSrcId];
+
+      // Custom ghost με αριθμό
+      const ghost=document.getElementById('ch-drag-ghost');
+      const ghostCount=document.getElementById('ch-drag-ghost-count');
+      if(ghost && dragIds.length>1){
+        ghostCount.textContent=dragIds.length;
+        ghost.style.display='block';
+        ghost.style.left='-9999px'; ghost.style.top='-9999px';
+        e.dataTransfer.setDragImage(ghost, 20, 20);
+        // Απόκρυψη μετά λίγο (setDragImage needs it visible briefly)
+        setTimeout(()=>ghost.style.display='none', 0);
+      }
+
+      setTimeout(()=>{
+        container.querySelectorAll('.ch-left[data-stream-id]').forEach(item=>{
+          const id=item.dataset.streamId;
+          if(dragIds.includes(id)) item.classList.add('ch-dragging');
+        });
+      }, 0);
+    });
+
+    el.addEventListener('dragend', ()=>{
+      container.querySelectorAll('.ch-left').forEach(x=>{
+        x.classList.remove('ch-dragging','ch-drag-over-top','ch-drag-over-bottom');
+      });
+      _chDragSrcId=null;
+    });
+
+    el.addEventListener('dragover', e=>{
+      e.preventDefault(); e.dataTransfer.dropEffect='move';
+      if(!_chDragSrcId) return;
+      const dragIds=_chSelected.size>0 ? [..._chSelected] : [_chDragSrcId];
+      if(dragIds.includes(el.dataset.streamId)) return;
+      container.querySelectorAll('.ch-drag-over-top,.ch-drag-over-bottom').forEach(x=>{
+        x.classList.remove('ch-drag-over-top','ch-drag-over-bottom');
+      });
+      const rect=el.getBoundingClientRect();
+      if(e.clientY<rect.top+rect.height/2) el.classList.add('ch-drag-over-top');
+      else el.classList.add('ch-drag-over-bottom');
+    });
+
+    el.addEventListener('dragleave', e=>{
+      if(!el.contains(e.relatedTarget))
+        el.classList.remove('ch-drag-over-top','ch-drag-over-bottom');
+    });
+
+    el.addEventListener('drop', e=>{
+      e.preventDefault();
+      el.classList.remove('ch-drag-over-top','ch-drag-over-bottom');
+      if(!_chDragSrcId) return;
+
+      const targetId=el.dataset.streamId;
+      const dragIds=_chSelected.size>0 ? [..._chSelected] : [_chDragSrcId];
+      if(dragIds.includes(targetId)) return;
+
+      const insertBefore=e.clientY<el.getBoundingClientRect().top+el.getBoundingClientRect().height/2;
+      const catId=S.currentCat;
+      const ordered=applyChOrder(currentChannelList, catId);
+
+      // Χωρίζουμε σε: κινούμενα + υπόλοιπα
+      const moving=ordered.filter(c=>dragIds.includes(String(c.stream_id)));
+      const rest=ordered.filter(c=>!dragIds.includes(String(c.stream_id)));
+
+      // Βρες το target index στα rest
+      const targetIdx=rest.findIndex(c=>String(c.stream_id)===targetId);
+      if(targetIdx<0) return;
+
+      // Εισαγωγή πριν ή μετά το target
+      const insertAt=insertBefore ? targetIdx : targetIdx+1;
+      rest.splice(insertAt, 0, ...moving);
+      const reordered=rest;
+
+      saveChOrder(catId, reordered.map(c=>String(c.stream_id)));
+
+      // DOM reorder στο αριστερό panel
+      const byId=new Map([...container.querySelectorAll('.ch-left[data-stream-id]')].map(el=>[el.dataset.streamId,el]));
+      reordered.forEach(c=>{ const node=byId.get(String(c.stream_id)); if(node) container.appendChild(node); });
+
+      toast(`↕ ${moving.length>1?moving.length+' κανάλια μετακινήθηκαν':'Σειρά αποθηκεύτηκε'}`);
+      updateResetOrderBtn();
+      syncEpgRowOrder(reordered);
+      // Κράτα την επιλογή μετά το drop για οπτική επιβεβαίωση
+      updateChSelectUI();
+    });
+  });
+}
+
+// Ταξινόμησε τα EPG rows δεξιά να ακολουθούν τη νέα σειρά καναλιών
+function syncEpgRowOrder(orderedChs){
+  const epgList=document.getElementById('channels-list');
+  if(!epgList) return;
+  const byId=new Map([...epgList.querySelectorAll('.channel-item[data-stream-id]')].map(el=>[el.dataset.streamId, el]));
+  orderedChs.forEach(c=>{ const node=byId.get(String(c.stream_id)); if(node) epgList.appendChild(node); });
 }
 
 // Σχεδιάζει τη sticky γραμμή ωρών
@@ -1250,7 +1544,26 @@ function updateEpgStatusBar(filtered){
   else { el.textContent=`📅 ${loaded}/${filtered.length}`; }
 }
 
-function filterChannels(v){if(S.currentCat&&S.channels[S.currentCat])renderChannels(S.channels[S.currentCat],v);}
+function filterChannels(v){
+  if(S.currentCat&&S.channels[S.currentCat])
+    renderChannels(applyChOrder(S.channels[S.currentCat],S.currentCat),v);
+  else if(S.currentCat==='__ch_favs__') showChFavorites();
+}
+
+function resetChOrder(){
+  if(!S.currentCat) return;
+  localStorage.removeItem('ns_ch_order_'+S.currentCat);
+  if(S.channels[S.currentCat]) renderChannels(applyChOrder(S.channels[S.currentCat],S.currentCat));
+  updateResetOrderBtn();
+  toast('↺ Επαναφορά αρχικής σειράς');
+}
+
+function updateResetOrderBtn(){
+  const btn=document.getElementById('reset-ch-order-btn');
+  if(!btn) return;
+  const hasOrder=S.currentCat && getChOrder(S.currentCat)!==null;
+  btn.style.display=hasOrder?'':'none';
+}
 
 
 
@@ -1402,7 +1715,7 @@ function fmtTime(d){
 function playLive(ch){
   S.currentChannel=ch.stream_id;
   currentChId=ch.stream_id;
-  if(S.currentCat&&S.channels[S.currentCat]) renderChannels(S.channels[S.currentCat],document.querySelector('.ch-search-mini').value);
+  if(S.currentCat&&S.channels[S.currentCat]) renderChannels(applyChOrder(S.channels[S.currentCat],S.currentCat),document.querySelector('.ch-search-mini').value);
   const ext=ch.container_extension||'ts';
   const url=`${S.server}/live/${enc(S.user)}/${enc(S.pass)}/${ch.stream_id}.${ext}`;
   doPlay(url,ch.name);
@@ -1413,7 +1726,7 @@ function playLive(ch){
   loadEpg(ch.stream_id).then(()=>{
     updateEpgBar();
     // refresh channel list για EPG titles
-    if(S.currentCat&&S.channels[S.currentCat]) renderChannels(S.channels[S.currentCat],document.querySelector('.ch-search-mini').value);
+    if(S.currentCat&&S.channels[S.currentCat]) renderChannels(applyChOrder(S.channels[S.currentCat],S.currentCat),document.querySelector('.ch-search-mini').value);
   });
   clearInterval(epgTimer);
   epgTimer=setInterval(updateEpgBar,30000);
@@ -1761,6 +2074,21 @@ window.addEventListener('DOMContentLoaded',()=>{
   // Double-click για fullscreen
   const pc=document.getElementById('player-container');
   if(pc) pc.addEventListener('dblclick',()=>toggleFullscreen());
+
+  // ── Double-click σε κανάλι → rename (event delegation) ──
+  document.addEventListener('dblclick', e=>{
+    const chLeft=e.target.closest('.ch-left[data-stream-id]');
+    if(!chLeft) return;
+    if(e.target.closest('.ch-fav-btn')) return;
+    if(e.target.closest('.ch-drag-handle')) return;
+    if(e.target.closest('.ch-rename-input')) return;
+    e.stopPropagation();
+    // Ακύρωσε το pending single-click (openMpvDirect)
+    clearTimeout(_chLeftClickTimer);
+    const streamId=chLeft.dataset.streamId;
+    const originalName=chLeft.dataset.originalName||'';
+    startChRename(streamId, originalName, chLeft, e);
+  });
 });
 
 // ── EXTERNAL PLAYER ──
@@ -1794,7 +2122,7 @@ function openMpvDirect(ch){
   // Highlighted κανάλι
   updatePlayingHighlight();
   // Ενημέρωσε το active state στη λίστα
-  if(S.currentCat&&S.channels[S.currentCat]) renderChannels(S.channels[S.currentCat],document.querySelector('.ch-search-mini').value);
+  if(S.currentCat&&S.channels[S.currentCat]) renderChannels(applyChOrder(S.channels[S.currentCat],S.currentCat),document.querySelector('.ch-search-mini').value);
   else if(S.currentCat==='__ch_favs__') showChFavorites();
   // Ενημέρωσε το now playing
   document.getElementById('now-playing-info').innerHTML=`<div class="channel-name">▶ MPV: ${esc(ch.name)}</div>`;
@@ -1802,7 +2130,7 @@ function openMpvDirect(ch){
   epgData[ch.stream_id]=null;
   loadEpg(ch.stream_id).then(()=>{
     updateEpgBar();
-    if(S.currentCat&&S.channels[S.currentCat]) renderChannels(S.channels[S.currentCat],document.querySelector('.ch-search-mini').value);
+    if(S.currentCat&&S.channels[S.currentCat]) renderChannels(applyChOrder(S.channels[S.currentCat],S.currentCat),document.querySelector('.ch-search-mini').value);
   });
   clearInterval(epgTimer);
   epgTimer=setInterval(updateEpgBar,30000);
@@ -2620,6 +2948,9 @@ function setupResize(handleId, panelId, storageKey, minW, maxW){
   <div class="epg-popup-dur" id="epg-popup-dur"></div>
   <div id="epg-popup-desc-wrap"></div>
 </div>
+
+<!-- CHANNEL MULTI-SELECT BAR (injected into epg-ch-panel dynamically) -->
+<div id="ch-drag-ghost">📦 <span id="ch-drag-ghost-count"></span> κανάλια</div>
 
 </body>
 </html>
